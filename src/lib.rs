@@ -51,7 +51,7 @@ pub struct StateA {
 /// 発生させるか否かをまだ解決していない。
 /// そんな状態。
 #[derive(Clone, Debug)]
-pub struct StateB {
+pub struct ExistenceOfHandNotResolved {
     state: StateA,
     previous_a_side_hop1zuo1: Vec<absolute::NonTam2Piece>,
     previous_ia_side_hop1zuo1: Vec<absolute::NonTam2Piece>,
@@ -70,6 +70,16 @@ pub struct StateC {
     season: Season,
     ia_owner_s_score: i32,
     rate: Rate,
+}
+
+impl StateC {
+    pub fn piece_at_flying_piece_src(&self) -> absolute::Piece {
+        *self
+            .f
+            .board
+            .get(&self.flying_piece_src)
+            .expect("Invalid StateC: at flying_piece_src there is no piece")
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -149,10 +159,14 @@ pub struct InfAfterStep {
 }
 pub struct AfterHalfAcceptance {
     /// None: hands over the turn to the opponent
+    /// None は（投げ棒の出目が気に入らなかったために）パスして相手に手番を渡すことを表す
     pub dest: Option<absolute::Coord>,
 }
 
-pub fn apply_normal_move(old_state: &StateA, msg: NormalMove) -> Probabilistic<StateB> {
+pub fn apply_normal_move(
+    old_state: &StateA,
+    msg: NormalMove,
+) -> Probabilistic<ExistenceOfHandNotResolved> {
     unimplemented!()
 }
 
@@ -163,20 +177,91 @@ pub fn apply_inf_after_step(old_state: &StateA, msg: InfAfterStep) -> Probabilis
 pub fn apply_after_half_acceptance(
     old_state: &StateC,
     msg: AfterHalfAcceptance,
-) -> Probabilistic<StateB> {
-    unimplemented!()
+) -> Probabilistic<ExistenceOfHandNotResolved> {
+    let StateC {
+        flying_piece_src: src,
+        flying_piece_step: step,
+        ..
+    } = *old_state;
+
+    if let Some(msgdest) = msg.dest {
+        let piece = old_state.piece_at_flying_piece_src();
+        if absolute::is_water(src) || piece.has_prof(cetkaik_core::Profession::Nuak1) {
+            /*
+
+                    const {
+              hand_is_made,
+            } = movePieceFromSrcToDestWhileTakingOpponentPieceIfNeeded(
+              game_state,
+              src,
+              msg.dest,
+              room_info.is_IA_down_for_me,
+            );
+            const final_obj = getLastMove(game_state);
+            if (typeof final_obj === "undefined" || !isInfAfterStep(final_obj)) {
+              return { legal: false, whyIllegal: "the last move was not InfAfterStep" };
+            }
+
+            final_obj.move.finalResult = {
+              dest: msg.dest,
+            };
+
+            final_obj.status = hand_is_made ? "not yet" : null;
+
+            const ans: Ret_AfterHalfAcceptance = {
+              legal: true,
+              dat: {
+                waterEntryHappened: false,
+              },
+            };
+
+            ifStepTamEditScore(game_state, step, room_info);
+            return ans;
+
+                    */
+            unimplemented!()
+        }
+
+        if absolute::is_water(msgdest) {
+            unimplemented!("if step tam edit score")
+        }
+
+        unimplemented!()
+    } else {
+        // the only possible side effect is that Stepping Tam might
+        // modify the score. Water entry cannot fail,
+        // since the piece has not actually moved.
+        // 唯一ありえる副作用は、撃皇で点が減っている可能性があるということ
+        // パスが発生した以上、駒の動きは実際には発生していないので、
+        // 入水判定は発生していない。
+
+        unimplemented!("if step tam edit score")
+    }
 }
 
-pub enum Foo {
+/// `ExistenceOfHandNotResolved` を `resolve` でこの型に変換することによって、
+/// 「役は発生しなかったぞ」 vs.
+/// 「役は発生しており、したがって
+/// * 再行ならこの `StateA` に至る
+/// * 終季ならこの `Probabilistic<StateA>` に至る
+/// （どちらが先手になるかは鯖のみぞ知るので `Probabilistic`）
+/// 」のどちらであるかを知ることができる。
+/// 撃皇が役を構成するかどうかによってここの処理は変わってくるので、
+/// `Config` が要求されることになる。
+pub enum ExistenceOfHandResolved {
     NeitherTymokNorTaxot(StateA),
-    TymokOrTaxot {
+    HandExists {
         if_tymok: StateA,
         if_taxot: Probabilistic<StateA>,
     },
 }
 
-impl Into<Foo> for StateB {
-    fn into(self) -> Foo {
+pub struct Config {
+    pub step_tam_is_a_hand: bool,
+}
+
+impl ExistenceOfHandNotResolved {
+    pub fn resolve(self, config: Config) -> ExistenceOfHandResolved {
         unimplemented!()
     }
 }
