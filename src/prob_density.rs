@@ -13,7 +13,7 @@ pub struct Probabilistic<T>(Vec<(T, f64)>);
 impl<T> Probabilistic<T> {
     pub fn to_inner(self) -> Vec<(T, f64)> {
         self.0
-    }    
+    }
 
     pub fn map<B, F>(self, f: F) -> Probabilistic<B>
     where

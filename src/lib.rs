@@ -1,9 +1,13 @@
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Hash)]
 pub enum Season {
-    Iei2, //Spring
-    Xo1,  //Summer
-    Kat2, // Autumn
-    Iat1, // Winter
+    ///春, Spring
+    Iei2,
+    ///夏, Summer
+    Xo1,
+    ///秋, Autumn
+    Kat2,
+    ///冬, Winter
+    Iat1,
 }
 
 mod prob_density;
@@ -100,9 +104,53 @@ impl Rate {
     }
 }
 
-pub type NormalMove = ();
-pub type InfAfterStep = ();
-pub type AfterHalfAcceptance = ();
+pub enum NormalMove {
+    NonTamMoveSrcDst {
+        src: absolute::Coord,
+        dest: absolute::Coord,
+        /* is_water_entry_ciurl: bool, */
+    },
+    NonTamMoveSrcStepDstFinite {
+        src: absolute::Coord,
+        step: absolute::Coord,
+        dest: absolute::Coord,
+        /* is_water_entry_ciurl: bool, */
+    },
+    NonTamMoveFromHand {
+        color: cetkaik_core::Color,
+        prof: cetkaik_core::Profession,
+        dest: absolute::Coord,
+    },
+    TamMoveNoStep {
+        src: absolute::Coord,
+        first_dest: absolute::Coord,
+        second_dest: absolute::Coord,
+    },
+    TamMoveStepsDuringFormer {
+        src: absolute::Coord,
+        step: absolute::Coord,
+        first_dest: absolute::Coord,
+        second_dest: absolute::Coord,
+    },
+    TamMoveStepsDuringLatter {
+        src: absolute::Coord,
+        step: absolute::Coord,
+        first_dest: absolute::Coord,
+        second_dest: absolute::Coord,
+    },
+}
+
+pub struct InfAfterStep {
+    pub color: cetkaik_core::Color,
+    pub prof: cetkaik_core::Profession,
+    pub src: absolute::Coord,
+    pub step: absolute::Coord,
+    pub planned_direction: absolute::Coord,
+}
+pub struct AfterHalfAcceptance {
+    /// None: hands over the turn to the opponent
+    pub dest: Option<absolute::Coord>,
+}
 
 pub fn apply_normal_move(old_state: &StateA, msg: NormalMove) -> Probabilistic<StateB> {
     unimplemented!()
@@ -112,16 +160,19 @@ pub fn apply_inf_after_step(old_state: &StateA, msg: InfAfterStep) -> Probabilis
     unimplemented!()
 }
 
-pub fn apply_after_half_acceptance(old_state: &StateC, msg: AfterHalfAcceptance) -> Probabilistic<StateB> {
+pub fn apply_after_half_acceptance(
+    old_state: &StateC,
+    msg: AfterHalfAcceptance,
+) -> Probabilistic<StateB> {
     unimplemented!()
 }
 
-enum Foo {
+pub enum Foo {
     NeitherTymokNorTaxot(StateA),
-    TymokOrTaxot{
+    TymokOrTaxot {
         if_tymok: StateA,
-        if_taxot: Probabilistic<StateA>
-    }
+        if_taxot: Probabilistic<StateA>,
+    },
 }
 
 impl Into<Foo> for StateB {
