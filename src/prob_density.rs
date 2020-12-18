@@ -15,6 +15,10 @@ impl<T> Probabilistic<T> {
         self.0
     }
 
+    pub fn pure(t: T) -> Probabilistic<T> {
+        Probabilistic(vec![(t, 1.0)])
+    }
+
     pub fn map<B, F>(self, f: F) -> Probabilistic<B>
     where
         F: Fn(T) -> B,

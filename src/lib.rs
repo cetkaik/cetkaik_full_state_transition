@@ -39,7 +39,7 @@ use cetkaik_core::absolute;
 pub struct StateA {
     f: absolute::Field,
     tam_itself_is_tam_hue: bool,
-    is_ia_owner_s_turn: bool,
+    whose_turn: absolute::Side,
     season: Season,
     ia_owner_s_score: i32,
     rate: Rate,
@@ -64,7 +64,7 @@ pub struct ExistenceOfHandNotResolved {
 pub struct StateC {
     f: absolute::Field,
     tam_itself_is_tam_hue: bool,
-    is_ia_owner_s_turn: bool,
+    whose_turn: absolute::Side,
     flying_piece_src: absolute::Coord,
     flying_piece_step: absolute::Coord,
     season: Season,
@@ -79,6 +79,14 @@ impl StateC {
             .board
             .get(&self.flying_piece_src)
             .expect("Invalid StateC: at flying_piece_src there is no piece")
+    }
+
+    pub fn piece_at_flying_piece_step(&self) -> absolute::Piece {
+        *self
+            .f
+            .board
+            .get(&self.flying_piece_step)
+            .expect("Invalid StateC: at flying_piece_step there is no piece")
     }
 }
 
@@ -173,11 +181,51 @@ pub fn apply_normal_move(
 pub fn apply_inf_after_step(old_state: &StateA, msg: InfAfterStep) -> Probabilistic<StateC> {
     unimplemented!()
 }
+/*
+struct HandIsMade {
+    hand_is_made: bool,
+}
+
+fn movePieceFromSrcToDestWhileTakingOpponentPieceIfNeeded(
+    game_state: GameState,
+    src: absolute::Coord,
+    dest: absolute::Coord,
+    is_IA_down_for_me: bool,
+) -> Result<HandIsMade, &'static str> {
+    let piece = setPiece(game_state, src, None).ok_or("src does not contain a piece")?;
+    let maybe_taken = setPiece(game_state, dest, piece);
+    if let Ok(taken) = maybe_taken {
+        if is_IA_down_for_me {
+            if !isNonTam2PieceNonIAOwner(taken) {
+                return Err("tried to take either an ally or tam2");
+            }
+            let old_state = calculateHandsAndScore(game_state.f.hop1zuo1OfIAOwner);
+            addToHop1Zuo1OfIAOwner(game_state, taken);
+            let new_state = calculateHandsAndScore(game_state.f.hop1zuo1OfIAOwner);
+            return Ok(HandIsMade {
+                hand_is_made: new_state.score != old_state.score,
+            });
+        } else {
+            if !isNonTam2PieceIAOwner(taken) {
+                return Err("tried to take either an ally or tam2");
+            }
+            let old_state = calculateHandsAndScore(game_state.f.hop1zuo1OfNonIAOwner);
+            addToHop1Zuo1OfNonIAOwner(game_state, taken);
+            let new_state = calculateHandsAndScore(game_state.f.hop1zuo1OfNonIAOwner);
+            return Ok(HandIsMade {
+                hand_is_made: new_state.score != old_state.score,
+            });
+        }
+    }
+    return Ok(HandIsMade {
+        hand_is_made: false,
+    });
+}*/
 
 pub fn apply_after_half_acceptance(
     old_state: &StateC,
     msg: AfterHalfAcceptance,
-) -> Probabilistic<ExistenceOfHandNotResolved> {
+) -> Result<Probabilistic<ExistenceOfHandNotResolved>, &'static str> {
     let StateC {
         flying_piece_src: src,
         flying_piece_step: step,
@@ -186,40 +234,43 @@ pub fn apply_after_half_acceptance(
 
     if let Some(msgdest) = msg.dest {
         let piece = old_state.piece_at_flying_piece_src();
+
+        // Either the piece started from within water, or the piece is a Vessel; no need to
+        // cast sticks to tell whether you can enter the water.
+        // 出発地点が皇水であるか、移動している駒が船であるため、いかなる条件でも入水判定が不要。
         if absolute::is_water(src) || piece.has_prof(cetkaik_core::Profession::Nuak1) {
-            /*
+            match old_state.f.board.get(&msgdest) {
+                None => {
+                    // no piece is to be captured
 
-                    const {
-              hand_is_made,
-            } = movePieceFromSrcToDestWhileTakingOpponentPieceIfNeeded(
-              game_state,
-              src,
-              msg.dest,
-              room_info.is_IA_down_for_me,
-            );
-            const final_obj = getLastMove(game_state);
-            if (typeof final_obj === "undefined" || !isInfAfterStep(final_obj)) {
-              return { legal: false, whyIllegal: "the last move was not InfAfterStep" };
+                    // 入水判定が絶対にないので確率は1
+                    // succeeds with probability 1
+                }
+
+                Some(cetkaik_core::absolute::Piece::Tam2) => return Err("cannot capture a Tam2"),
+
+                Some(&cetkaik_core::absolute::Piece::NonTam2Piece {
+                    color: captured_piece_color,
+                    prof: captured_piece_prof,
+                    side: captured_piece_side,
+                }) => {
+                    if old_state.whose_turn == captured_piece_side {
+                        return Err("cannot capture your own piece");
+                    }
+
+                    // 入水判定が絶対にないので確率は1
+                    // succeeds with probability 1
+
+                    let new_state: StateA = unimplemented!();
+
+                    return Ok(Probabilistic::pure(ExistenceOfHandNotResolved {
+                        previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
+                        previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
+                        kut2tam2_happened: old_state.piece_at_flying_piece_step().is_tam2(),
+                        state: new_state
+                    }));
+                }
             }
-
-            final_obj.move.finalResult = {
-              dest: msg.dest,
-            };
-
-            final_obj.status = hand_is_made ? "not yet" : null;
-
-            const ans: Ret_AfterHalfAcceptance = {
-              legal: true,
-              dat: {
-                waterEntryHappened: false,
-              },
-            };
-
-            ifStepTamEditScore(game_state, step, room_info);
-            return ans;
-
-                    */
-            unimplemented!()
         }
 
         if absolute::is_water(msgdest) {
