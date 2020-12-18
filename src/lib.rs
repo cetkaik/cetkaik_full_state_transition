@@ -259,62 +259,30 @@ pub fn apply_after_half_acceptance(
                     old_state.whose_turn,
                 )?;
 
-            match maybe_captured_piece {
-                None => {
-                    // no piece is to be captured
+            let mut new_field = absolute::Field {
+                board: new_board,
+                ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
+                a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
+            };
 
-                    // 入水判定が絶対にないので確率は1
-                    // succeeds with probability 1
+            if let Some(absolute::NonTam2Piece { color, prof }) = maybe_captured_piece {
+                new_field.insert_nontam_piece_into_hop1zuo1(color, prof, old_state.whose_turn);
+            };
 
-                    return Ok(Probabilistic::pure(ExistenceOfHandNotResolved {
-                        previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
-                        previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
-                        kut2tam2_happened: old_state.piece_at_flying_piece_step().is_tam2(),
-                        rate: old_state.rate,
-                        tam_has_moved_previously: false,
-                        season: old_state.season,
-                        tam_itself_is_tam_hue: old_state.tam_itself_is_tam_hue,
-                        ia_owner_s_score: old_state.ia_owner_s_score,
-                        whose_turn: old_state.whose_turn,
-                        f: absolute::Field {
-                            board: new_board,
-                            ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
-                            a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
-                        },
-                    }));
-                }
-
-                Some(cetkaik_core::absolute::NonTam2Piece {
-                    color: captured_piece_color,
-                    prof: captured_piece_prof,
-                }) => {
-                    let mut new_field = absolute::Field {
-                        board: new_board,
-                        ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
-                        a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
-                    };
-                    new_field.insert_nontam_piece_into_hop1zuo1(
-                        captured_piece_color,
-                        captured_piece_prof,
-                        old_state.whose_turn,
-                    );
-
-                    // 入水判定が絶対にないので確率は1
-                    // succeeds with probability 1
-                    return Ok(Probabilistic::pure(ExistenceOfHandNotResolved {
-                        previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
-                        previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
-                        kut2tam2_happened: old_state.piece_at_flying_piece_step().is_tam2(),
-                        rate: old_state.rate,
-                        tam_has_moved_previously: false,
-                        season: old_state.season,
-                        tam_itself_is_tam_hue: old_state.tam_itself_is_tam_hue,
-                        ia_owner_s_score: old_state.ia_owner_s_score,
-                        whose_turn: old_state.whose_turn,
-                        f: new_field,
-                    }));
-                }
-            }
+            // 入水判定が絶対にないので確率は1
+            // succeeds with probability 1
+            return Ok(Probabilistic::pure(ExistenceOfHandNotResolved {
+                previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
+                previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
+                kut2tam2_happened: old_state.piece_at_flying_piece_step().is_tam2(),
+                rate: old_state.rate,
+                tam_has_moved_previously: false,
+                season: old_state.season,
+                tam_itself_is_tam_hue: old_state.tam_itself_is_tam_hue,
+                ia_owner_s_score: old_state.ia_owner_s_score,
+                whose_turn: old_state.whose_turn,
+                f: new_field,
+            }));
         }
 
         if absolute::is_water(msgdest) {
