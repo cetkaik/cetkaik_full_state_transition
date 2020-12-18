@@ -10,7 +10,7 @@ pub enum Season {
     Iat1,
 }
 
-mod prob_density;
+mod probabilistic;
 
 impl Season {
     pub fn next(self) -> Option<Self> {
@@ -112,7 +112,7 @@ pub enum Rate {
     X64,
 }
 
-use prob_density::Probabilistic;
+use probabilistic::Probabilistic;
 
 impl Rate {
     pub fn next(self) -> Option<Self> {
@@ -277,7 +277,7 @@ pub fn apply_after_half_acceptance(
 
         // 入水判定が絶対にないので確率は1
         // succeeds with probability 1
-        return Ok(Probabilistic::pure(ExistenceOfHandNotResolved {
+        return Ok(Probabilistic::Pure(ExistenceOfHandNotResolved {
             previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
             previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
             kut2tam2_happened: old_state.piece_at_flying_piece_step().is_tam2(),
