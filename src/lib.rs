@@ -244,52 +244,52 @@ pub fn apply_after_half_acceptance(
         ..
     } = *old_state;
 
-    if let Some(msgdest) = msg.dest {
+    if let Some(dest) = msg.dest {
         let piece = old_state.piece_at_flying_piece_src();
 
-        // Either the piece started from within water, or the piece is a Vessel; no need to
-        // cast sticks to tell whether you can enter the water.
-        // 出発地点が皇水であるか、移動している駒が船であるため、いかなる条件でも入水判定が不要。
-        if absolute::is_water(src) || piece.has_prof(cetkaik_core::Profession::Nuak1) {
-            let (new_board, maybe_captured_piece) =
-                move_nontam_piece_from_src_to_dest_while_taking_opponent_piece_if_needed(
-                    &old_state.f.board,
-                    src,
-                    msgdest,
-                    old_state.whose_turn,
-                )?;
-
-            let mut new_field = absolute::Field {
-                board: new_board,
-                ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
-                a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
-            };
-
-            if let Some(absolute::NonTam2Piece { color, prof }) = maybe_captured_piece {
-                new_field.insert_nontam_piece_into_hop1zuo1(color, prof, old_state.whose_turn);
-            };
-
-            // 入水判定が絶対にないので確率は1
-            // succeeds with probability 1
-            return Ok(Probabilistic::pure(ExistenceOfHandNotResolved {
-                previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
-                previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
-                kut2tam2_happened: old_state.piece_at_flying_piece_step().is_tam2(),
-                rate: old_state.rate,
-                tam_has_moved_previously: false,
-                season: old_state.season,
-                tam_itself_is_tam_hue: old_state.tam_itself_is_tam_hue,
-                ia_owner_s_score: old_state.ia_owner_s_score,
-                whose_turn: old_state.whose_turn,
-                f: new_field,
-            }));
+        // Trying to enter the water without any exemptions (neither the piece started from within water, nor the piece is a Vessel).
+        // Hence sticks must be cast.
+        // 入水判定が免除される特例（出発地点が皇水であるか、移動している駒が船である）なしで水に入ろうとしているので、判定が必要。
+        if !absolute::is_water(src)
+            && !piece.has_prof(cetkaik_core::Profession::Nuak1)
+            && absolute::is_water(dest)
+        {
+            unimplemented!()
         }
 
-        if absolute::is_water(msgdest) {
-            unimplemented!("if step tam edit score")
-        }
+        let (new_board, maybe_captured_piece) =
+            move_nontam_piece_from_src_to_dest_while_taking_opponent_piece_if_needed(
+                &old_state.f.board,
+                src,
+                dest,
+                old_state.whose_turn,
+            )?;
 
-        unimplemented!()
+        let mut new_field = absolute::Field {
+            board: new_board,
+            ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
+            a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
+        };
+
+        if let Some(absolute::NonTam2Piece { color, prof }) = maybe_captured_piece {
+            new_field.insert_nontam_piece_into_hop1zuo1(color, prof, old_state.whose_turn);
+        };
+
+        // 入水判定が絶対にないので確率は1
+        // succeeds with probability 1
+        return Ok(Probabilistic::pure(ExistenceOfHandNotResolved {
+            previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
+            previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
+            kut2tam2_happened: old_state.piece_at_flying_piece_step().is_tam2(),
+            rate: old_state.rate,
+            tam_has_moved_previously: false,
+            season: old_state.season,
+            tam_itself_is_tam_hue: old_state.tam_itself_is_tam_hue,
+            ia_owner_s_score: old_state.ia_owner_s_score,
+            whose_turn: old_state.whose_turn,
+            f: new_field,
+        }));
+
     } else {
         // the only possible side effect is that Stepping Tam might
         // modify the score. Water entry cannot fail,
