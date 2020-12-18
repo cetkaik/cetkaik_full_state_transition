@@ -52,7 +52,13 @@ pub struct StateA {
 /// そんな状態。
 #[derive(Clone, Debug)]
 pub struct ExistenceOfHandNotResolved {
-    state: StateA,
+    f: absolute::Field,
+    tam_itself_is_tam_hue: bool,
+    whose_turn: absolute::Side,
+    season: Season,
+    ia_owner_s_score: i32,
+    rate: Rate,
+    tam_has_moved_previously: bool,
     previous_a_side_hop1zuo1: Vec<absolute::NonTam2Piece>,
     previous_ia_side_hop1zuo1: Vec<absolute::NonTam2Piece>,
     kut2tam2_happened: bool,
@@ -181,46 +187,52 @@ pub fn apply_normal_move(
 pub fn apply_inf_after_step(old_state: &StateA, msg: InfAfterStep) -> Probabilistic<StateC> {
     unimplemented!()
 }
-/*
-struct HandIsMade {
-    hand_is_made: bool,
-}
 
-fn movePieceFromSrcToDestWhileTakingOpponentPieceIfNeeded(
-    game_state: GameState,
+fn move_nontam_piece_from_src_to_dest_while_taking_opponent_piece_if_needed(
+    board: &absolute::Board,
     src: absolute::Coord,
     dest: absolute::Coord,
-    is_IA_down_for_me: bool,
-) -> Result<HandIsMade, &'static str> {
-    let piece = setPiece(game_state, src, None).ok_or("src does not contain a piece")?;
-    let maybe_taken = setPiece(game_state, dest, piece);
-    if let Ok(taken) = maybe_taken {
-        if is_IA_down_for_me {
-            if !isNonTam2PieceNonIAOwner(taken) {
-                return Err("tried to take either an ally or tam2");
+    whose_turn: absolute::Side,
+) -> Result<(absolute::Board, Option<absolute::NonTam2Piece>), &'static str> {
+    let mut new_board = board.clone();
+
+    let src_piece = new_board
+        .remove(&src)
+        .ok_or("src does not contain a piece")?;
+    if src_piece.is_tam2() {
+        return Err("Expected a NonTam2Piece to be present at the src, but found a Tam2");
+    }
+
+    if !src_piece.has_side(whose_turn) {
+        return Err("Found the opponent piece at the src");
+    }
+
+    let maybe_captured_piece = new_board.remove(&dest);
+    new_board.insert(dest, src_piece);
+
+    if let Some(captured_piece) = maybe_captured_piece {
+        match captured_piece {
+            absolute::Piece::Tam2 => return Err("Tried to capture a Tam2"),
+            absolute::Piece::NonTam2Piece {
+                color: captured_piece_color,
+                prof: captured_piece_prof,
+                side: captured_piece_side,
+            } => {
+                if captured_piece_side == whose_turn {
+                    return Err("Tried to capture an ally");
+                }
+                return Ok((
+                    new_board,
+                    Some(absolute::NonTam2Piece {
+                        color: captured_piece_color,
+                        prof: captured_piece_prof,
+                    }),
+                ));
             }
-            let old_state = calculateHandsAndScore(game_state.f.hop1zuo1OfIAOwner);
-            addToHop1Zuo1OfIAOwner(game_state, taken);
-            let new_state = calculateHandsAndScore(game_state.f.hop1zuo1OfIAOwner);
-            return Ok(HandIsMade {
-                hand_is_made: new_state.score != old_state.score,
-            });
-        } else {
-            if !isNonTam2PieceIAOwner(taken) {
-                return Err("tried to take either an ally or tam2");
-            }
-            let old_state = calculateHandsAndScore(game_state.f.hop1zuo1OfNonIAOwner);
-            addToHop1Zuo1OfNonIAOwner(game_state, taken);
-            let new_state = calculateHandsAndScore(game_state.f.hop1zuo1OfNonIAOwner);
-            return Ok(HandIsMade {
-                hand_is_made: new_state.score != old_state.score,
-            });
         }
     }
-    return Ok(HandIsMade {
-        hand_is_made: false,
-    });
-}*/
+    return Ok((new_board, None));
+}
 
 pub fn apply_after_half_acceptance(
     old_state: &StateC,
@@ -239,35 +251,67 @@ pub fn apply_after_half_acceptance(
         // cast sticks to tell whether you can enter the water.
         // 出発地点が皇水であるか、移動している駒が船であるため、いかなる条件でも入水判定が不要。
         if absolute::is_water(src) || piece.has_prof(cetkaik_core::Profession::Nuak1) {
-            match old_state.f.board.get(&msgdest) {
+            let (new_board, maybe_captured_piece) =
+                move_nontam_piece_from_src_to_dest_while_taking_opponent_piece_if_needed(
+                    &old_state.f.board,
+                    src,
+                    msgdest,
+                    old_state.whose_turn,
+                )?;
+
+            match maybe_captured_piece {
                 None => {
                     // no piece is to be captured
 
                     // 入水判定が絶対にないので確率は1
                     // succeeds with probability 1
-                }
-
-                Some(cetkaik_core::absolute::Piece::Tam2) => return Err("cannot capture a Tam2"),
-
-                Some(&cetkaik_core::absolute::Piece::NonTam2Piece {
-                    color: captured_piece_color,
-                    prof: captured_piece_prof,
-                    side: captured_piece_side,
-                }) => {
-                    if old_state.whose_turn == captured_piece_side {
-                        return Err("cannot capture your own piece");
-                    }
-
-                    // 入水判定が絶対にないので確率は1
-                    // succeeds with probability 1
-
-                    let new_state: StateA = unimplemented!();
 
                     return Ok(Probabilistic::pure(ExistenceOfHandNotResolved {
                         previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
                         previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
                         kut2tam2_happened: old_state.piece_at_flying_piece_step().is_tam2(),
-                        state: new_state
+                        rate: old_state.rate,
+                        tam_has_moved_previously: false,
+                        season: old_state.season,
+                        tam_itself_is_tam_hue: old_state.tam_itself_is_tam_hue,
+                        ia_owner_s_score: old_state.ia_owner_s_score,
+                        whose_turn: old_state.whose_turn,
+                        f: absolute::Field {
+                            board: new_board,
+                            ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
+                            a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
+                        },
+                    }));
+                }
+
+                Some(cetkaik_core::absolute::NonTam2Piece {
+                    color: captured_piece_color,
+                    prof: captured_piece_prof,
+                }) => {
+                    let mut new_field = absolute::Field {
+                        board: new_board,
+                        ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
+                        a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
+                    };
+                    new_field.insert_nontam_piece_into_hop1zuo1(
+                        captured_piece_color,
+                        captured_piece_prof,
+                        old_state.whose_turn,
+                    );
+
+                    // 入水判定が絶対にないので確率は1
+                    // succeeds with probability 1
+                    return Ok(Probabilistic::pure(ExistenceOfHandNotResolved {
+                        previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
+                        previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
+                        kut2tam2_happened: old_state.piece_at_flying_piece_step().is_tam2(),
+                        rate: old_state.rate,
+                        tam_has_moved_previously: false,
+                        season: old_state.season,
+                        tam_itself_is_tam_hue: old_state.tam_itself_is_tam_hue,
+                        ia_owner_s_score: old_state.ia_owner_s_score,
+                        whose_turn: old_state.whose_turn,
+                        f: new_field,
                     }));
                 }
             }

@@ -7,6 +7,6 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cetkaik_core = "0.1.14"
+cetkaik_core = "0.1.16"
 cetkaik_yhuap_move_candidates = "0.1.0"
 readonly = "0.2.0"
