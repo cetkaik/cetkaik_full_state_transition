@@ -76,6 +76,7 @@ pub struct StateC {
     season: Season,
     ia_owner_s_score: i32,
     rate: Rate,
+    ciurl: i32,
 }
 
 impl StateC {
@@ -368,7 +369,74 @@ pub fn apply_normal_move(
 }
 
 pub fn apply_inf_after_step(old_state: &StateA, msg: InfAfterStep) -> Probabilistic<StateC> {
-    unimplemented!()
+    Probabilistic::Sticks {
+        s0: StateC {
+            f: old_state.f.clone(),
+            tam_itself_is_tam_hue: old_state.tam_itself_is_tam_hue,
+            whose_turn: old_state.whose_turn,
+            flying_piece_src: msg.src,
+            flying_piece_step: msg.step,
+            season: old_state.season,
+            ia_owner_s_score: old_state.ia_owner_s_score,
+            rate: old_state.rate,
+            ciurl: 0,
+        },
+        s1: StateC {
+            f: old_state.f.clone(),
+            tam_itself_is_tam_hue: old_state.tam_itself_is_tam_hue,
+            whose_turn: old_state.whose_turn,
+            flying_piece_src: msg.src,
+            flying_piece_step: msg.step,
+            season: old_state.season,
+            ia_owner_s_score: old_state.ia_owner_s_score,
+            rate: old_state.rate,
+            ciurl: 1,
+        },
+        s2: StateC {
+            f: old_state.f.clone(),
+            tam_itself_is_tam_hue: old_state.tam_itself_is_tam_hue,
+            whose_turn: old_state.whose_turn,
+            flying_piece_src: msg.src,
+            flying_piece_step: msg.step,
+            season: old_state.season,
+            ia_owner_s_score: old_state.ia_owner_s_score,
+            rate: old_state.rate,
+            ciurl: 2,
+        },
+        s3: StateC {
+            f: old_state.f.clone(),
+            tam_itself_is_tam_hue: old_state.tam_itself_is_tam_hue,
+            whose_turn: old_state.whose_turn,
+            flying_piece_src: msg.src,
+            flying_piece_step: msg.step,
+            season: old_state.season,
+            ia_owner_s_score: old_state.ia_owner_s_score,
+            rate: old_state.rate,
+            ciurl: 3,
+        },
+        s4: StateC {
+            f: old_state.f.clone(),
+            tam_itself_is_tam_hue: old_state.tam_itself_is_tam_hue,
+            whose_turn: old_state.whose_turn,
+            flying_piece_src: msg.src,
+            flying_piece_step: msg.step,
+            season: old_state.season,
+            ia_owner_s_score: old_state.ia_owner_s_score,
+            rate: old_state.rate,
+            ciurl: 4,
+        },
+        s5: StateC {
+            f: old_state.f.clone(),
+            tam_itself_is_tam_hue: old_state.tam_itself_is_tam_hue,
+            whose_turn: old_state.whose_turn,
+            flying_piece_src: msg.src,
+            flying_piece_step: msg.step,
+            season: old_state.season,
+            ia_owner_s_score: old_state.ia_owner_s_score,
+            rate: old_state.rate,
+            ciurl: 5,
+        },
+    }
 }
 
 fn move_nontam_piece_from_src_to_dest_while_taking_opponent_piece_if_needed(
