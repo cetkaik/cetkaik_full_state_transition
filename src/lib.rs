@@ -68,6 +68,12 @@ pub struct ExistenceOfHandNotResolved {
 /// 裁を見て、ユーザーは最終的な移動場所をCに対しこれから送りつける。
 #[derive(Clone, Debug)]
 pub struct StateC {
+    c: StateCWithoutCiurl,
+    ciurl: i32,
+}
+
+#[derive(Clone, Debug)]
+pub struct StateCWithoutCiurl {
     f: absolute::Field,
     tam_itself_is_tam_hue: bool,
     whose_turn: absolute::Side,
@@ -76,23 +82,24 @@ pub struct StateC {
     season: Season,
     ia_owner_s_score: i32,
     rate: Rate,
-    ciurl: i32,
 }
 
 impl StateC {
     pub fn piece_at_flying_piece_src(&self) -> absolute::Piece {
         *self
+            .c
             .f
             .board
-            .get(&self.flying_piece_src)
+            .get(&self.c.flying_piece_src)
             .expect("Invalid StateC: at flying_piece_src there is no piece")
     }
 
     pub fn piece_at_flying_piece_step(&self) -> absolute::Piece {
         *self
+            .c
             .f
             .board
-            .get(&self.flying_piece_step)
+            .get(&self.c.flying_piece_step)
             .expect("Invalid StateC: at flying_piece_step there is no piece")
     }
 }
@@ -369,71 +376,40 @@ pub fn apply_normal_move(
 }
 
 pub fn apply_inf_after_step(old_state: &StateA, msg: InfAfterStep) -> Probabilistic<StateC> {
+    let c = StateCWithoutCiurl {
+        f: old_state.f.clone(),
+        tam_itself_is_tam_hue: old_state.tam_itself_is_tam_hue,
+        whose_turn: old_state.whose_turn,
+        flying_piece_src: msg.src,
+        flying_piece_step: msg.step,
+        season: old_state.season,
+        ia_owner_s_score: old_state.ia_owner_s_score,
+        rate: old_state.rate,
+    };
+
     Probabilistic::Sticks {
         s0: StateC {
-            f: old_state.f.clone(),
-            tam_itself_is_tam_hue: old_state.tam_itself_is_tam_hue,
-            whose_turn: old_state.whose_turn,
-            flying_piece_src: msg.src,
-            flying_piece_step: msg.step,
-            season: old_state.season,
-            ia_owner_s_score: old_state.ia_owner_s_score,
-            rate: old_state.rate,
+            c: c.clone(),
             ciurl: 0,
         },
         s1: StateC {
-            f: old_state.f.clone(),
-            tam_itself_is_tam_hue: old_state.tam_itself_is_tam_hue,
-            whose_turn: old_state.whose_turn,
-            flying_piece_src: msg.src,
-            flying_piece_step: msg.step,
-            season: old_state.season,
-            ia_owner_s_score: old_state.ia_owner_s_score,
-            rate: old_state.rate,
+            c: c.clone(),
             ciurl: 1,
         },
         s2: StateC {
-            f: old_state.f.clone(),
-            tam_itself_is_tam_hue: old_state.tam_itself_is_tam_hue,
-            whose_turn: old_state.whose_turn,
-            flying_piece_src: msg.src,
-            flying_piece_step: msg.step,
-            season: old_state.season,
-            ia_owner_s_score: old_state.ia_owner_s_score,
-            rate: old_state.rate,
+            c: c.clone(),
             ciurl: 2,
         },
         s3: StateC {
-            f: old_state.f.clone(),
-            tam_itself_is_tam_hue: old_state.tam_itself_is_tam_hue,
-            whose_turn: old_state.whose_turn,
-            flying_piece_src: msg.src,
-            flying_piece_step: msg.step,
-            season: old_state.season,
-            ia_owner_s_score: old_state.ia_owner_s_score,
-            rate: old_state.rate,
+            c: c.clone(),
             ciurl: 3,
         },
         s4: StateC {
-            f: old_state.f.clone(),
-            tam_itself_is_tam_hue: old_state.tam_itself_is_tam_hue,
-            whose_turn: old_state.whose_turn,
-            flying_piece_src: msg.src,
-            flying_piece_step: msg.step,
-            season: old_state.season,
-            ia_owner_s_score: old_state.ia_owner_s_score,
-            rate: old_state.rate,
+            c: c.clone(),
             ciurl: 4,
         },
         s5: StateC {
-            f: old_state.f.clone(),
-            tam_itself_is_tam_hue: old_state.tam_itself_is_tam_hue,
-            whose_turn: old_state.whose_turn,
-            flying_piece_src: msg.src,
-            flying_piece_step: msg.step,
-            season: old_state.season,
-            ia_owner_s_score: old_state.ia_owner_s_score,
-            rate: old_state.rate,
+            c: c.clone(),
             ciurl: 5,
         },
     }
@@ -490,20 +466,23 @@ pub fn apply_after_half_acceptance(
     msg: AfterHalfAcceptance,
 ) -> Result<Probabilistic<ExistenceOfHandNotResolved>, &'static str> {
     let nothing_happened = ExistenceOfHandNotResolved {
-        previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
-        previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
+        previous_a_side_hop1zuo1: old_state.c.f.a_side_hop1zuo1.clone(),
+        previous_ia_side_hop1zuo1: old_state.c.f.ia_side_hop1zuo1.clone(),
         kut2tam2_happened: old_state.piece_at_flying_piece_step().is_tam2(),
-        rate: old_state.rate,
+        rate: old_state.c.rate,
         tam_has_moved_previously: false,
-        season: old_state.season,
-        tam_itself_is_tam_hue: old_state.tam_itself_is_tam_hue,
-        ia_owner_s_score: old_state.ia_owner_s_score,
-        whose_turn: old_state.whose_turn,
-        f: old_state.f.clone(),
+        season: old_state.c.season,
+        tam_itself_is_tam_hue: old_state.c.tam_itself_is_tam_hue,
+        ia_owner_s_score: old_state.c.ia_owner_s_score,
+        whose_turn: old_state.c.whose_turn,
+        f: old_state.c.f.clone(),
     };
 
     let StateC {
-        flying_piece_src, ..
+        c: StateCWithoutCiurl {
+            flying_piece_src, ..
+        },
+        ..
     } = *old_state;
 
     if let Some(dest) = msg.dest {
@@ -511,33 +490,33 @@ pub fn apply_after_half_acceptance(
 
         let (new_board, maybe_captured_piece) =
             move_nontam_piece_from_src_to_dest_while_taking_opponent_piece_if_needed(
-                &old_state.f.board,
+                &old_state.c.f.board,
                 flying_piece_src,
                 dest,
-                old_state.whose_turn,
+                old_state.c.whose_turn,
             )?;
 
         let mut new_field = absolute::Field {
             board: new_board,
-            ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
-            a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
+            ia_side_hop1zuo1: old_state.c.f.ia_side_hop1zuo1.clone(),
+            a_side_hop1zuo1: old_state.c.f.a_side_hop1zuo1.clone(),
         };
 
         if let Some(absolute::NonTam2Piece { color, prof }) = maybe_captured_piece {
-            new_field.insert_nontam_piece_into_hop1zuo1(color, prof, old_state.whose_turn);
+            new_field.insert_nontam_piece_into_hop1zuo1(color, prof, old_state.c.whose_turn);
         };
 
         // 入水判定不存在、または成功
         let success = ExistenceOfHandNotResolved {
-            previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
-            previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
+            previous_a_side_hop1zuo1: old_state.c.f.a_side_hop1zuo1.clone(),
+            previous_ia_side_hop1zuo1: old_state.c.f.ia_side_hop1zuo1.clone(),
             kut2tam2_happened: old_state.piece_at_flying_piece_step().is_tam2(),
-            rate: old_state.rate,
+            rate: old_state.c.rate,
             tam_has_moved_previously: false,
-            season: old_state.season,
-            tam_itself_is_tam_hue: old_state.tam_itself_is_tam_hue,
-            ia_owner_s_score: old_state.ia_owner_s_score,
-            whose_turn: old_state.whose_turn,
+            season: old_state.c.season,
+            tam_itself_is_tam_hue: old_state.c.tam_itself_is_tam_hue,
+            ia_owner_s_score: old_state.c.ia_owner_s_score,
+            whose_turn: old_state.c.whose_turn,
             f: new_field,
         };
 
