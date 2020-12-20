@@ -208,7 +208,6 @@ fn apply_tam_move(
     }
 
     new_field.board.insert(second_dest, absolute::Piece::Tam2);
-    
     return Ok(Probabilistic::Pure(ExistenceOfHandNotResolved {
         previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
         previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
@@ -229,7 +228,79 @@ fn apply_nontam_move(
     dest: absolute::Coord,
     step: Option<absolute::Coord>,
 ) -> Result<Probabilistic<ExistenceOfHandNotResolved>, &'static str> {
-    unimplemented!()
+    let nothing_happened = ExistenceOfHandNotResolved {
+        previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
+        previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
+        kut2tam2_happened: match step {
+            None => false,
+            Some(step) => match old_state.f.board.get(&step) {
+                Some(absolute::Piece::Tam2) => true,
+                _ => false,
+            },
+        },
+        rate: old_state.rate,
+        tam_has_moved_previously: false,
+        season: old_state.season,
+        tam_itself_is_tam_hue: old_state.tam_itself_is_tam_hue,
+        ia_owner_s_score: old_state.ia_owner_s_score,
+        whose_turn: old_state.whose_turn,
+        f: old_state.f.clone(),
+    };
+
+    if let Some(st) = step {
+        if !old_state.f.board.contains_key(&st) {
+            return Err("expected a stepping square but found an empty square");
+        }
+    }
+
+    let src_piece = old_state
+        .f
+        .board
+        .get(&src)
+        .ok_or("src does not contain a piece")?;
+
+    let (new_board, maybe_captured_piece) =
+        move_nontam_piece_from_src_to_dest_while_taking_opponent_piece_if_needed(
+            &old_state.f.board,
+            src,
+            dest,
+            old_state.whose_turn,
+        )?;
+    let mut new_field = absolute::Field {
+        board: new_board,
+        a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
+        ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
+    };
+
+    if let Some(absolute::NonTam2Piece { color, prof }) = maybe_captured_piece {
+        new_field.insert_nontam_piece_into_hop1zuo1(color, prof, old_state.whose_turn);
+    }
+
+    let success = ExistenceOfHandNotResolved {
+        previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
+        previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
+        kut2tam2_happened: false,
+        rate: old_state.rate,
+        tam_has_moved_previously: false,
+        season: old_state.season,
+        tam_itself_is_tam_hue: old_state.tam_itself_is_tam_hue,
+        ia_owner_s_score: old_state.ia_owner_s_score,
+        whose_turn: old_state.whose_turn,
+        f: new_field,
+    };
+
+    // 入水判定
+    // water-entry cast
+    if !absolute::is_water(src)
+        && !src_piece.has_prof(cetkaik_core::Profession::Nuak1)
+        && absolute::is_water(dest)
+    {
+        return Ok(Probabilistic::Water {
+            failure: nothing_happened,
+            success,
+        });
+    }
+    return Ok(Probabilistic::Pure(success));
 }
 
 pub fn apply_normal_move(
