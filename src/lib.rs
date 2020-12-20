@@ -177,11 +177,123 @@ pub struct AfterHalfAcceptance {
     pub dest: Option<absolute::Coord>,
 }
 
+fn apply_tam_move(
+    old_state: &StateA,
+    src: absolute::Coord,
+    first_dest: absolute::Coord,
+    second_dest: absolute::Coord,
+    step: Option<absolute::Coord>,
+) -> Result<Probabilistic<ExistenceOfHandNotResolved>, &'static str> {
+    let mut new_field = old_state.f.clone();
+    let expect_tam = new_field
+        .board
+        .remove(&src)
+        .ok_or("expected tam2 but found an empty square")?;
+    if !expect_tam.is_tam2() {
+        return Err("expected tam2 but found a non-tam2 piece");
+    }
+
+    if new_field.board.contains_key(&first_dest) {
+        return Err("the first destination is already occupied");
+    }
+
+    if let Some(st) = step {
+        if !new_field.board.contains_key(&st) {
+            return Err("the stepping square is empty");
+        }
+    }
+
+    if new_field.board.contains_key(&second_dest) {
+        return Err("the second destination is already occupied");
+    }
+
+    new_field.board.insert(second_dest, absolute::Piece::Tam2);
+    
+    return Ok(Probabilistic::Pure(ExistenceOfHandNotResolved {
+        previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
+        previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
+        kut2tam2_happened: false,
+        rate: old_state.rate,
+        tam_has_moved_previously: true,
+        season: old_state.season,
+        tam_itself_is_tam_hue: old_state.tam_itself_is_tam_hue,
+        ia_owner_s_score: old_state.ia_owner_s_score,
+        whose_turn: old_state.whose_turn,
+        f: new_field,
+    }));
+}
+
+fn apply_nontam_move(
+    old_state: &StateA,
+    src: absolute::Coord,
+    dest: absolute::Coord,
+    step: Option<absolute::Coord>,
+) -> Result<Probabilistic<ExistenceOfHandNotResolved>, &'static str> {
+    unimplemented!()
+}
+
 pub fn apply_normal_move(
     old_state: &StateA,
     msg: NormalMove,
-) -> Probabilistic<ExistenceOfHandNotResolved> {
-    unimplemented!()
+) -> Result<Probabilistic<ExistenceOfHandNotResolved>, &'static str> {
+    match msg {
+        NormalMove::NonTamMoveFromHand { color, prof, dest } => {
+            let mut new_field = old_state
+                .f
+                .find_and_remove_piece_from_hop1zuo1(color, prof, old_state.whose_turn)
+                .ok_or("Cannot find the specified piece in the hop1zuo1")?;
+
+            if new_field.board.contains_key(&dest) {
+                return Err("The destination is already occupied and hence cannot place a piece from hop1 zuo1");
+            }
+
+            new_field.board.insert(
+                dest,
+                absolute::Piece::NonTam2Piece {
+                    color,
+                    prof,
+                    side: old_state.whose_turn,
+                },
+            );
+
+            return Ok(Probabilistic::Pure(ExistenceOfHandNotResolved {
+                previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
+                previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
+                kut2tam2_happened: false,
+                rate: old_state.rate,
+                tam_has_moved_previously: false,
+                season: old_state.season,
+                tam_itself_is_tam_hue: old_state.tam_itself_is_tam_hue,
+                ia_owner_s_score: old_state.ia_owner_s_score,
+                whose_turn: old_state.whose_turn,
+                f: new_field,
+            }));
+        }
+        NormalMove::TamMoveNoStep {
+            src,
+            first_dest,
+            second_dest,
+        } => return apply_tam_move(old_state, src, first_dest, second_dest, None),
+        NormalMove::TamMoveStepsDuringFormer {
+            src,
+            first_dest,
+            second_dest,
+            step,
+        }
+        | NormalMove::TamMoveStepsDuringLatter {
+            src,
+            first_dest,
+            second_dest,
+            step,
+        } => return apply_tam_move(old_state, src, first_dest, second_dest, Some(step)),
+
+        NormalMove::NonTamMoveSrcDst { src, dest } => {
+            return apply_nontam_move(old_state, src, dest, None)
+        }
+        NormalMove::NonTamMoveSrcStepDstFinite { src, step, dest } => {
+            return apply_nontam_move(old_state, src, dest, Some(step))
+        }
+    }
 }
 
 pub fn apply_inf_after_step(old_state: &StateA, msg: InfAfterStep) -> Probabilistic<StateC> {
