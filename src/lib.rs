@@ -38,7 +38,6 @@ use cetkaik_core::absolute;
 #[derive(Clone, Debug)]
 pub struct StateA {
     f: absolute::Field,
-    tam_itself_is_tam_hue: bool,
     whose_turn: absolute::Side,
     season: Season,
     ia_owner_s_score: i32,
@@ -53,7 +52,6 @@ pub struct StateA {
 #[derive(Clone, Debug)]
 pub struct ExistenceOfHandNotResolved {
     f: absolute::Field,
-    tam_itself_is_tam_hue: bool,
     whose_turn: absolute::Side,
     season: Season,
     ia_owner_s_score: i32,
@@ -75,7 +73,6 @@ pub struct StateC {
 #[derive(Clone, Debug)]
 pub struct StateCWithoutCiurl {
     f: absolute::Field,
-    tam_itself_is_tam_hue: bool,
     whose_turn: absolute::Side,
     flying_piece_src: absolute::Coord,
     flying_piece_step: absolute::Coord,
@@ -191,6 +188,7 @@ fn apply_tam_move(
     first_dest: absolute::Coord,
     second_dest: absolute::Coord,
     step: Option<absolute::Coord>,
+    config: Config
 ) -> Result<Probabilistic<ExistenceOfHandNotResolved>, &'static str> {
     let mut new_field = old_state.f.clone();
     let expect_tam = new_field
@@ -223,7 +221,6 @@ fn apply_tam_move(
         rate: old_state.rate,
         tam_has_moved_previously: true,
         season: old_state.season,
-        tam_itself_is_tam_hue: old_state.tam_itself_is_tam_hue,
         ia_owner_s_score: old_state.ia_owner_s_score,
         whose_turn: old_state.whose_turn,
         f: new_field,
@@ -235,6 +232,7 @@ fn apply_nontam_move(
     src: absolute::Coord,
     dest: absolute::Coord,
     step: Option<absolute::Coord>,
+    config: Config
 ) -> Result<Probabilistic<ExistenceOfHandNotResolved>, &'static str> {
     let nothing_happened = ExistenceOfHandNotResolved {
         previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
@@ -249,7 +247,6 @@ fn apply_nontam_move(
         rate: old_state.rate,
         tam_has_moved_previously: false,
         season: old_state.season,
-        tam_itself_is_tam_hue: old_state.tam_itself_is_tam_hue,
         ia_owner_s_score: old_state.ia_owner_s_score,
         whose_turn: old_state.whose_turn,
         f: old_state.f.clone(),
@@ -291,7 +288,6 @@ fn apply_nontam_move(
         rate: old_state.rate,
         tam_has_moved_previously: false,
         season: old_state.season,
-        tam_itself_is_tam_hue: old_state.tam_itself_is_tam_hue,
         ia_owner_s_score: old_state.ia_owner_s_score,
         whose_turn: old_state.whose_turn,
         f: new_field,
@@ -314,6 +310,7 @@ fn apply_nontam_move(
 pub fn apply_normal_move(
     old_state: &StateA,
     msg: NormalMove,
+    config: Config
 ) -> Result<Probabilistic<ExistenceOfHandNotResolved>, &'static str> {
     match msg {
         NormalMove::NonTamMoveFromHand { color, prof, dest } => {
@@ -342,7 +339,6 @@ pub fn apply_normal_move(
                 rate: old_state.rate,
                 tam_has_moved_previously: false,
                 season: old_state.season,
-                tam_itself_is_tam_hue: old_state.tam_itself_is_tam_hue,
                 ia_owner_s_score: old_state.ia_owner_s_score,
                 whose_turn: old_state.whose_turn,
                 f: new_field,
@@ -352,7 +348,7 @@ pub fn apply_normal_move(
             src,
             first_dest,
             second_dest,
-        } => return apply_tam_move(old_state, src, first_dest, second_dest, None),
+        } => return apply_tam_move(old_state, src, first_dest, second_dest, None, config),
         NormalMove::TamMoveStepsDuringFormer {
             src,
             first_dest,
@@ -364,21 +360,20 @@ pub fn apply_normal_move(
             first_dest,
             second_dest,
             step,
-        } => return apply_tam_move(old_state, src, first_dest, second_dest, Some(step)),
+        } => return apply_tam_move(old_state, src, first_dest, second_dest, Some(step), config),
 
         NormalMove::NonTamMoveSrcDst { src, dest } => {
-            return apply_nontam_move(old_state, src, dest, None)
+            return apply_nontam_move(old_state, src, dest, None, config)
         }
         NormalMove::NonTamMoveSrcStepDstFinite { src, step, dest } => {
-            return apply_nontam_move(old_state, src, dest, Some(step))
+            return apply_nontam_move(old_state, src, dest, Some(step), config)
         }
     }
 }
 
-pub fn apply_inf_after_step(old_state: &StateA, msg: InfAfterStep) -> Probabilistic<StateC> {
+pub fn apply_inf_after_step(old_state: &StateA, msg: InfAfterStep, config: Config) -> Probabilistic<StateC> {
     let c = StateCWithoutCiurl {
         f: old_state.f.clone(),
-        tam_itself_is_tam_hue: old_state.tam_itself_is_tam_hue,
         whose_turn: old_state.whose_turn,
         flying_piece_src: msg.src,
         flying_piece_step: msg.step,
@@ -464,6 +459,7 @@ fn move_nontam_piece_from_src_to_dest_while_taking_opponent_piece_if_needed(
 pub fn apply_after_half_acceptance(
     old_state: &StateC,
     msg: AfterHalfAcceptance,
+    config: Config
 ) -> Result<Probabilistic<ExistenceOfHandNotResolved>, &'static str> {
     let nothing_happened = ExistenceOfHandNotResolved {
         previous_a_side_hop1zuo1: old_state.c.f.a_side_hop1zuo1.clone(),
@@ -472,7 +468,6 @@ pub fn apply_after_half_acceptance(
         rate: old_state.c.rate,
         tam_has_moved_previously: false,
         season: old_state.c.season,
-        tam_itself_is_tam_hue: old_state.c.tam_itself_is_tam_hue,
         ia_owner_s_score: old_state.c.ia_owner_s_score,
         whose_turn: old_state.c.whose_turn,
         f: old_state.c.f.clone(),
@@ -514,7 +509,6 @@ pub fn apply_after_half_acceptance(
             rate: old_state.c.rate,
             tam_has_moved_previously: false,
             season: old_state.c.season,
-            tam_itself_is_tam_hue: old_state.c.tam_itself_is_tam_hue,
             ia_owner_s_score: old_state.c.ia_owner_s_score,
             whose_turn: old_state.c.whose_turn,
             f: new_field,
@@ -567,10 +561,10 @@ pub enum ExistenceOfHandResolved {
 
 pub struct Config {
     pub step_tam_is_a_hand: bool,
+    pub tam_itself_is_tam_hue: bool,
 }
 
-impl ExistenceOfHandNotResolved {
-    pub fn resolve(self, config: Config) -> ExistenceOfHandResolved {
-        unimplemented!()
-    }
+pub fn resolve(state: ExistenceOfHandResolved, config: Config) -> ExistenceOfHandResolved {
+    unimplemented!()
 }
+
