@@ -7,8 +7,8 @@ version = "0.1.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cetkaik_calculate_hand = "0.1.1"
-cetkaik_core = "0.1.20"
-cetkaik_yhuap_move_candidates = "0.1.0"
+cetkaik_calculate_hand = "0.1.2"
+cetkaik_core = "0.2.0"
+cetkaik_yhuap_move_candidates = "0.1.1"
 readonly = "0.2.0"
 maplit = "1.0.2"

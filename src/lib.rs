@@ -1,3 +1,4 @@
+#[warn(clippy::pedantic)]
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Hash)]
 pub enum Season {
     ///春, Spring
@@ -36,8 +37,6 @@ impl Season {
 use cetkaik_core::absolute;
 
 pub mod state;
-
-
 
 impl state::C {
     pub fn piece_at_flying_piece_src(&self) -> absolute::Piece {
@@ -465,7 +464,6 @@ pub fn apply_after_half_acceptance(
         return Ok(Probabilistic::Pure(nothing_happened));
     }
 }
-
 
 pub enum IfTaxot {
     NextTurn(Probabilistic<state::A>),
