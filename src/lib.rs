@@ -557,10 +557,66 @@ pub fn apply_after_half_acceptance(
         c: state::CWithoutCiurl {
             flying_piece_src, ..
         },
-        ..
+        ciurl
     } = *old_state;
 
     if let Some(dest) = msg.dest {
+        // it is possible that the destination is illegal.
+        // dest に変な値を突っ込まれることに対する対策が必要なので検閲する。
+        {
+            let perspective = match old_state.c.whose_turn {
+                absolute::Side::IASide => {
+                    cetkaik_core::perspective::Perspective::IaIsUpAndPointsDownward
+                }
+                absolute::Side::ASide => {
+                    cetkaik_core::perspective::Perspective::IaIsDownAndPointsUpward
+                }
+            };
+            let candidates = cetkaik_yhuap_move_candidates::not_from_hand_candidates_(
+                &cetkaik_yhuap_move_candidates::Config {
+                    allow_kut2tam2: true,
+                },
+                &cetkaik_yhuap_move_candidates::PureGameState {
+                    perspective,
+                    opponent_has_just_moved_tam: false, /* it doesn't matter */
+                    tam_itself_is_tam_hue: config.tam_itself_is_tam_hue,
+                    f: cetkaik_yhuap_move_candidates::to_relative_field(
+                        old_state.c.f.clone(),
+                        perspective,
+                    ),
+                },
+            );
+            if !candidates
+                .into_iter()
+                .filter(|cand| match cand {
+                    cetkaik_yhuap_move_candidates::PureMove::InfAfterStep {
+                        src,
+                        step,
+                        planned_direction,
+                    } => {
+                        *src == old_state.c.flying_piece_src
+                            && *step == old_state.c.flying_piece_step
+                            && *planned_direction == dest
+                    }
+                    _ => false,
+                })
+                .count()
+                > 0
+            {
+                return Err(
+                    "The provided InfAfterStep was rejected by the crate `cetkaik_yhuap_move_candidates`.",
+                );
+            }
+
+            // must also check whether the ciurl limit is not violated
+            // 投げ棒による距離限界についても検査が要る
+            if ciurl < cetkaik_core::absolute::distance(old_state.c.flying_piece_step, dest) {
+                return Err(
+                    "The provided InfAfterStep was rejected because the ciurl limit was exceeded.",
+                );
+            }
+        }
+
         let piece = old_state.piece_at_flying_piece_src();
 
         let (new_board, maybe_captured_piece) =
