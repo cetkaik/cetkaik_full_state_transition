@@ -27,21 +27,21 @@ impl<T: Clone> Into<Prob<(T, Option<usize>)>> for Probabilistic<T> {
             // 先手を決定する手段についてはこの関数で定めないので、
             // 投げ棒を一貫して表示するには、この関数と独立で実装側で先手決定手段を考慮しなければならない。
             Probabilistic::WhoGoesFirst { ia_first, a_first } => {
-                vec![
+                Prob(vec![
                     ((ia_first, None), 1.0 / 2.0),
                     ((a_first, None), 1.0 / 2.0),
-                ]
+                ])
             }
-            Probabilistic::Pure(t) => vec![((t, None), 1.0)],
+            Probabilistic::Pure(t) => Prob(vec![((t, None), 1.0)]),
             Probabilistic::Water { failure, success } => {
-                vec![
+                Prob(vec![
                     ((failure.clone(), Some(0)), 1.0 / 32.0),
                     ((failure.clone(), Some(1)), 5.0 / 32.0),
                     ((failure.clone(), Some(2)), 10.0 / 32.0),
                     ((success.clone(), Some(3)), 10.0 / 32.0),
                     ((success.clone(), Some(4)), 5.0 / 32.0),
                     ((success.clone(), Some(5)), 1.0 / 32.0),
-                ]
+                ])
             }
             Probabilistic::Sticks {
                 s0,
@@ -51,17 +51,17 @@ impl<T: Clone> Into<Prob<(T, Option<usize>)>> for Probabilistic<T> {
                 s4,
                 s5,
             } => {
-                vec![
+                Prob(vec![
                     ((s0, Some(0)), 1.0 / 32.0),
                     ((s1, Some(1)), 5.0 / 32.0),
                     ((s2, Some(2)), 10.0 / 32.0),
                     ((s3, Some(3)), 10.0 / 32.0),
                     ((s4, Some(4)), 5.0 / 32.0),
                     ((s5, Some(5)), 1.0 / 32.0),
-                ]
+                ])
             }
         }
     }
 }
 
-type Prob<T> = Vec<(T, f64)>;
+pub struct Prob<T>(pub Vec<(T, f64)>);

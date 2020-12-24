@@ -10,7 +10,8 @@ pub enum Season {
     Iat1,
 }
 
-mod probabilistic;
+pub mod message;
+pub mod probabilistic;
 
 impl Season {
     pub fn next(self) -> Option<Self> {
@@ -34,61 +35,18 @@ impl Season {
 
 use cetkaik_core::absolute;
 
-/// 一番普通の状態。定常状態。
-#[derive(Clone, Debug)]
-pub struct StateA {
-    f: absolute::Field,
-    whose_turn: absolute::Side,
-    season: Season,
-    ia_owner_s_score: i32,
-    rate: Rate,
-    tam_has_moved_previously: bool,
-}
+pub mod state;
 
-/// 入水判定も終わり、駒を完全に動かし終わった。
-/// しかしながら、「役が存在していて再行・終季をユーザーに訊く」を
-/// 発生させるか否かをまだ解決していない。
-/// そんな状態。
-#[derive(Clone, Debug)]
-pub struct ExistenceOfHandNotResolved {
-    f: absolute::Field,
-    whose_turn: absolute::Side,
-    season: Season,
-    ia_owner_s_score: i32,
-    rate: Rate,
-    tam_has_moved_previously: bool,
-    previous_a_side_hop1zuo1: Vec<absolute::NonTam2Piece>,
-    previous_ia_side_hop1zuo1: Vec<absolute::NonTam2Piece>,
-    kut2tam2_happened: bool,
-}
 
-/// 踏越え後の無限移動をユーザーが行い、それに対して裁で判定した後の状態。
-/// 裁を見て、ユーザーは最終的な移動場所をCに対しこれから送りつける。
-#[derive(Clone, Debug)]
-pub struct StateC {
-    c: StateCWithoutCiurl,
-    ciurl: i32,
-}
 
-#[derive(Clone, Debug)]
-pub struct StateCWithoutCiurl {
-    f: absolute::Field,
-    whose_turn: absolute::Side,
-    flying_piece_src: absolute::Coord,
-    flying_piece_step: absolute::Coord,
-    season: Season,
-    ia_owner_s_score: i32,
-    rate: Rate,
-}
-
-impl StateC {
+impl state::C {
     pub fn piece_at_flying_piece_src(&self) -> absolute::Piece {
         *self
             .c
             .f
             .board
             .get(&self.c.flying_piece_src)
-            .expect("Invalid StateC: at flying_piece_src there is no piece")
+            .expect("Invalid state::C: at flying_piece_src there is no piece")
     }
 
     pub fn piece_at_flying_piece_step(&self) -> absolute::Piece {
@@ -97,7 +55,7 @@ impl StateC {
             .f
             .board
             .get(&self.c.flying_piece_step)
-            .expect("Invalid StateC: at flying_piece_step there is no piece")
+            .expect("Invalid state::C: at flying_piece_step there is no piece")
     }
 }
 
@@ -144,63 +102,14 @@ impl Rate {
     }
 }
 
-pub enum NormalMove {
-    NonTamMoveSrcDst {
-        src: absolute::Coord,
-        dest: absolute::Coord,
-        /* is_water_entry_ciurl: bool, */
-    },
-    NonTamMoveSrcStepDstFinite {
-        src: absolute::Coord,
-        step: absolute::Coord,
-        dest: absolute::Coord,
-        /* is_water_entry_ciurl: bool, */
-    },
-    NonTamMoveFromHand {
-        color: cetkaik_core::Color,
-        prof: cetkaik_core::Profession,
-        dest: absolute::Coord,
-    },
-    TamMoveNoStep {
-        src: absolute::Coord,
-        first_dest: absolute::Coord,
-        second_dest: absolute::Coord,
-    },
-    TamMoveStepsDuringFormer {
-        src: absolute::Coord,
-        step: absolute::Coord,
-        first_dest: absolute::Coord,
-        second_dest: absolute::Coord,
-    },
-    TamMoveStepsDuringLatter {
-        src: absolute::Coord,
-        step: absolute::Coord,
-        first_dest: absolute::Coord,
-        second_dest: absolute::Coord,
-    },
-}
-
-pub struct InfAfterStep {
-    pub color: cetkaik_core::Color,
-    pub prof: cetkaik_core::Profession,
-    pub src: absolute::Coord,
-    pub step: absolute::Coord,
-    pub planned_direction: absolute::Coord,
-}
-pub struct AfterHalfAcceptance {
-    /// None: hands over the turn to the opponent
-    /// None は（投げ棒の出目が気に入らなかったために）パスして相手に手番を渡すことを表す
-    pub dest: Option<absolute::Coord>,
-}
-
 fn apply_tam_move(
-    old_state: &StateA,
+    old_state: &state::A,
     src: absolute::Coord,
     first_dest: absolute::Coord,
     second_dest: absolute::Coord,
     step: Option<absolute::Coord>,
     config: Config,
-) -> Result<Probabilistic<ExistenceOfHandNotResolved>, &'static str> {
+) -> Result<Probabilistic<state::HandNotResolved>, &'static str> {
     let mut new_field = old_state.f.clone();
     let expect_tam = new_field
         .board
@@ -225,7 +134,7 @@ fn apply_tam_move(
     }
 
     new_field.board.insert(second_dest, absolute::Piece::Tam2);
-    return Ok(Probabilistic::Pure(ExistenceOfHandNotResolved {
+    return Ok(Probabilistic::Pure(state::HandNotResolved {
         previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
         previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
         kut2tam2_happened: false,
@@ -239,13 +148,13 @@ fn apply_tam_move(
 }
 
 fn apply_nontam_move(
-    old_state: &StateA,
+    old_state: &state::A,
     src: absolute::Coord,
     dest: absolute::Coord,
     step: Option<absolute::Coord>,
     config: Config,
-) -> Result<Probabilistic<ExistenceOfHandNotResolved>, &'static str> {
-    let nothing_happened = ExistenceOfHandNotResolved {
+) -> Result<Probabilistic<state::HandNotResolved>, &'static str> {
+    let nothing_happened = state::HandNotResolved {
         previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
         previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
         kut2tam2_happened: match step {
@@ -292,7 +201,7 @@ fn apply_nontam_move(
         new_field.insert_nontam_piece_into_hop1zuo1(color, prof, old_state.whose_turn);
     }
 
-    let success = ExistenceOfHandNotResolved {
+    let success = state::HandNotResolved {
         previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
         previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
         kut2tam2_happened: false,
@@ -319,12 +228,12 @@ fn apply_nontam_move(
 }
 
 pub fn apply_normal_move(
-    old_state: &StateA,
-    msg: NormalMove,
+    old_state: &state::A,
+    msg: message::NormalMove,
     config: Config,
-) -> Result<Probabilistic<ExistenceOfHandNotResolved>, &'static str> {
+) -> Result<Probabilistic<state::HandNotResolved>, &'static str> {
     match msg {
-        NormalMove::NonTamMoveFromHand { color, prof, dest } => {
+        message::NormalMove::NonTamMoveFromHand { color, prof, dest } => {
             let mut new_field = old_state
                 .f
                 .find_and_remove_piece_from_hop1zuo1(color, prof, old_state.whose_turn)
@@ -343,7 +252,7 @@ pub fn apply_normal_move(
                 },
             );
 
-            return Ok(Probabilistic::Pure(ExistenceOfHandNotResolved {
+            return Ok(Probabilistic::Pure(state::HandNotResolved {
                 previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
                 previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
                 kut2tam2_happened: false,
@@ -355,39 +264,39 @@ pub fn apply_normal_move(
                 f: new_field,
             }));
         }
-        NormalMove::TamMoveNoStep {
+        message::NormalMove::TamMoveNoStep {
             src,
             first_dest,
             second_dest,
         } => return apply_tam_move(old_state, src, first_dest, second_dest, None, config),
-        NormalMove::TamMoveStepsDuringFormer {
+        message::NormalMove::TamMoveStepsDuringFormer {
             src,
             first_dest,
             second_dest,
             step,
         }
-        | NormalMove::TamMoveStepsDuringLatter {
+        | message::NormalMove::TamMoveStepsDuringLatter {
             src,
             first_dest,
             second_dest,
             step,
         } => return apply_tam_move(old_state, src, first_dest, second_dest, Some(step), config),
 
-        NormalMove::NonTamMoveSrcDst { src, dest } => {
+        message::NormalMove::NonTamMoveSrcDst { src, dest } => {
             return apply_nontam_move(old_state, src, dest, None, config)
         }
-        NormalMove::NonTamMoveSrcStepDstFinite { src, step, dest } => {
+        message::NormalMove::NonTamMoveSrcStepDstFinite { src, step, dest } => {
             return apply_nontam_move(old_state, src, dest, Some(step), config)
         }
     }
 }
 
 pub fn apply_inf_after_step(
-    old_state: &StateA,
-    msg: InfAfterStep,
+    old_state: &state::A,
+    msg: message::InfAfterStep,
     config: Config,
-) -> Probabilistic<StateC> {
-    let c = StateCWithoutCiurl {
+) -> Probabilistic<state::C> {
+    let c = state::CWithoutCiurl {
         f: old_state.f.clone(),
         whose_turn: old_state.whose_turn,
         flying_piece_src: msg.src,
@@ -398,27 +307,27 @@ pub fn apply_inf_after_step(
     };
 
     Probabilistic::Sticks {
-        s0: StateC {
+        s0: state::C {
             c: c.clone(),
             ciurl: 0,
         },
-        s1: StateC {
+        s1: state::C {
             c: c.clone(),
             ciurl: 1,
         },
-        s2: StateC {
+        s2: state::C {
             c: c.clone(),
             ciurl: 2,
         },
-        s3: StateC {
+        s3: state::C {
             c: c.clone(),
             ciurl: 3,
         },
-        s4: StateC {
+        s4: state::C {
             c: c.clone(),
             ciurl: 4,
         },
-        s5: StateC {
+        s5: state::C {
             c: c.clone(),
             ciurl: 5,
         },
@@ -472,11 +381,11 @@ fn move_nontam_piece_from_src_to_dest_while_taking_opponent_piece_if_needed(
 }
 
 pub fn apply_after_half_acceptance(
-    old_state: &StateC,
-    msg: AfterHalfAcceptance,
+    old_state: &state::C,
+    msg: message::AfterHalfAcceptance,
     config: Config,
-) -> Result<Probabilistic<ExistenceOfHandNotResolved>, &'static str> {
-    let nothing_happened = ExistenceOfHandNotResolved {
+) -> Result<Probabilistic<state::HandNotResolved>, &'static str> {
+    let nothing_happened = state::HandNotResolved {
         previous_a_side_hop1zuo1: old_state.c.f.a_side_hop1zuo1.clone(),
         previous_ia_side_hop1zuo1: old_state.c.f.ia_side_hop1zuo1.clone(),
         kut2tam2_happened: old_state.piece_at_flying_piece_step().is_tam2(),
@@ -488,8 +397,8 @@ pub fn apply_after_half_acceptance(
         f: old_state.c.f.clone(),
     };
 
-    let StateC {
-        c: StateCWithoutCiurl {
+    let state::C {
+        c: state::CWithoutCiurl {
             flying_piece_src, ..
         },
         ..
@@ -517,7 +426,7 @@ pub fn apply_after_half_acceptance(
         };
 
         // 入水判定不存在、または成功
-        let success = ExistenceOfHandNotResolved {
+        let success = state::HandNotResolved {
             previous_a_side_hop1zuo1: old_state.c.f.a_side_hop1zuo1.clone(),
             previous_ia_side_hop1zuo1: old_state.c.f.ia_side_hop1zuo1.clone(),
             kut2tam2_happened: old_state.piece_at_flying_piece_step().is_tam2(),
@@ -557,22 +466,9 @@ pub fn apply_after_half_acceptance(
     }
 }
 
-/// `ExistenceOfHandNotResolved` を `resolve` でこの型に変換することによって、
-/// 「役は発生しなかったぞ」 vs.
-/// 「役は発生しており、したがって
-/// * 再行ならこの `StateA` に至る
-/// * 終季ならこの `Probabilistic<StateA>` に至る
-/// （どちらが先手になるかは鯖のみぞ知るので `Probabilistic`）
-/// 」のどちらであるかを知ることができる。
-/// 撃皇が役を構成するかどうかによってここの処理は変わってくるので、
-/// `Config` が要求されることになる。
-pub enum ExistenceOfHandResolved {
-    NeitherTymokNorTaxot(StateA),
-    HandExists { if_tymok: StateA, if_taxot: IfTaxot },
-}
 
 pub enum IfTaxot {
-    NextTurn(Probabilistic<StateA>),
+    NextTurn(Probabilistic<state::A>),
 
     /// if VictoriousSide(Some(SideA)), SideA has won; if VictoriousSide(Some(SideIA)), SideIA has won.
     /// if VictoriousSide(None), the game is a draw.
@@ -586,7 +482,7 @@ pub struct Config {
     pub tam_itself_is_tam_hue: bool,
 }
 
-pub fn resolve(state: ExistenceOfHandNotResolved, config: Config) -> ExistenceOfHandResolved {
+pub fn resolve(state: state::HandNotResolved, config: Config) -> state::HandResolved {
     use cetkaik_calculate_hand::{calculate_hands_and_score_from_pieces, ScoreAndHands};
     let tymoxtaxot_because_of_kut2tam2 = state.kut2tam2_happened && config.step_tam_is_a_hand;
 
@@ -644,7 +540,7 @@ pub fn resolve(state: ExistenceOfHandNotResolved, config: Config) -> ExistenceOf
         // 役ができていないので、次の人に手番を渡す
         // この際、step_tam_is_a_handがfalseの場合、5点×レートを引くだけ引く。
         (false, None) => {
-            return ExistenceOfHandResolved::NeitherTymokNorTaxot(StateA {
+            return state::HandResolved::NeitherTymokNorTaxot(state::A {
                 f: state.f.clone(),
                 whose_turn: !state.whose_turn, /* hand the turn to the next person */
                 season: state.season,
@@ -680,7 +576,7 @@ pub fn resolve(state: ExistenceOfHandNotResolved, config: Config) -> ExistenceOf
     } else if new_ia_owner_s_score == 0 {
         IfTaxot::VictoriousSide(Some(absolute::Side::ASide))
     } else if let Some(next_season) = state.season.next() {
-        let ia_first = StateA {
+        let ia_first = state::A {
             whose_turn: absolute::Side::IASide,
             ia_owner_s_score: new_ia_owner_s_score,
             rate: Rate::X1,
@@ -705,8 +601,8 @@ pub fn resolve(state: ExistenceOfHandNotResolved, config: Config) -> ExistenceOf
         }
     };
 
-    ExistenceOfHandResolved::HandExists {
-        if_tymok: StateA {
+    state::HandResolved::HandExists {
+        if_tymok: state::A {
             f: state.f.clone(),
             whose_turn: !state.whose_turn, /* hand the turn to the next person */
             season: state.season,
@@ -718,4 +614,3 @@ pub fn resolve(state: ExistenceOfHandNotResolved, config: Config) -> ExistenceOf
         if_taxot,
     }
 }
-
