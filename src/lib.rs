@@ -231,6 +231,8 @@ pub fn apply_normal_move(
     msg: message::NormalMove,
     config: Config,
 ) -> Result<Probabilistic<state::HandNotResolved>, &'static str> {
+    use cetkaik_yhuap_move_candidates::*;
+
     match msg {
         message::NormalMove::NonTamMoveFromHand { color, prof, dest } => {
             let mut new_field = old_state
@@ -250,6 +252,44 @@ pub fn apply_normal_move(
                     side: old_state.whose_turn,
                 },
             );
+
+            // For the sake of consistency, `cetkaik_yhuap_move_candidates` is called,
+            // but since all illegal moves from hop1zuo1 are those that are trivially illegal
+            // (that is, "you can't place onto a non-empty square" and "you can't place what you don't have"),
+            // `cetkaik_yhuap_move_candidates` should never report a failure.
+            // that is why it is not `return Err` but is `unreachable`.
+            // 念のため `cetkaik_yhuap_move_candidates` を呼び出しておくが、
+            // 持ち駒から打つ際の違法手というのが実は自明なものを除いて不存在なので、
+            // ここで弾かれるとしたらコードがバグっているということになる。
+            // したがって、 return Err ではなく unreachable としてある。
+            {
+                // must set it so that old_state.whose_turn points downward
+                let perspective = match old_state.whose_turn {
+                    absolute::Side::IASide => {
+                        cetkaik_core::perspective::Perspective::IaIsUpAndPointsDownward
+                    }
+                    absolute::Side::ASide => {
+                        cetkaik_core::perspective::Perspective::IaIsDownAndPointsUpward
+                    }
+                };
+
+                let hand_candidates = from_hand_candidates(&PureGameState {
+                    perspective,
+                    opponent_has_just_moved_tam: old_state.tam_has_moved_previously,
+                    tam_itself_is_tam_hue: config.tam_itself_is_tam_hue,
+                    f: to_relative_field(old_state.f.clone(), perspective),
+                });
+
+                if !hand_candidates.contains(
+                    &cetkaik_yhuap_move_candidates::PureMove::NonTamMoveFromHand {
+                        color,
+                        prof,
+                        dest,
+                    },
+                ) {
+                    unreachable!("inconsistencies found between cetkaik_yhuap_move_candidates::PureMove::NonTamMoveFromHand and cetkaik_full_state_transition::apply_nontam_move")
+                }
+            }
 
             return Ok(Probabilistic::Pure(state::HandNotResolved {
                 previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),

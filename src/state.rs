@@ -14,19 +14,19 @@ pub struct A {
 /// 裁を見て、ユーザーは最終的な移動場所をCに対しこれから送りつける。
 #[derive(Clone, Debug)]
 pub struct C {
-   pub c: CWithoutCiurl,
-   pub ciurl: i32,
+    pub c: CWithoutCiurl,
+    pub ciurl: i32,
 }
 
 #[derive(Clone, Debug)]
 pub struct CWithoutCiurl {
-   pub f: absolute::Field,
-   pub whose_turn: absolute::Side,
-   pub flying_piece_src: absolute::Coord,
-   pub flying_piece_step: absolute::Coord,
-   pub season: Season,
-   pub ia_owner_s_score: i32,
-   pub rate: Rate,
+    pub f: absolute::Field,
+    pub whose_turn: absolute::Side,
+    pub flying_piece_src: absolute::Coord,
+    pub flying_piece_step: absolute::Coord,
+    pub season: Season,
+    pub ia_owner_s_score: i32,
+    pub rate: Rate,
 }
 
 /// 入水判定も終わり、駒を完全に動かし終わった。
@@ -35,17 +35,16 @@ pub struct CWithoutCiurl {
 /// そんな状態。
 #[derive(Clone, Debug)]
 pub struct HandNotResolved {
-   pub f: absolute::Field,
-   pub whose_turn: absolute::Side,
-   pub season: Season,
-   pub ia_owner_s_score: i32,
-   pub rate: Rate,
-   pub tam_has_moved_previously: bool,
-   pub previous_a_side_hop1zuo1: Vec<absolute::NonTam2Piece>,
-   pub previous_ia_side_hop1zuo1: Vec<absolute::NonTam2Piece>,
-   pub kut2tam2_happened: bool,
+    pub f: absolute::Field,
+    pub whose_turn: absolute::Side,
+    pub season: Season,
+    pub ia_owner_s_score: i32,
+    pub rate: Rate,
+    pub tam_has_moved_previously: bool,
+    pub previous_a_side_hop1zuo1: Vec<absolute::NonTam2Piece>,
+    pub previous_ia_side_hop1zuo1: Vec<absolute::NonTam2Piece>,
+    pub kut2tam2_happened: bool,
 }
-
 
 /// `state::HandNotResolved` を `resolve` でこの型に変換することによって、
 /// 「役は発生しなかったぞ」 vs.
