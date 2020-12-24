@@ -408,7 +408,50 @@ pub fn apply_inf_after_step(
     old_state: &state::A,
     msg: message::InfAfterStep,
     config: Config,
-) -> Probabilistic<state::C> {
+) -> Result<Probabilistic<state::C>, &'static str> {
+    if !old_state.f.board.contains_key(&msg.src) {
+        return Err("In InfAfterStep, `src` is not occupied; illegal");
+    }
+
+    if !old_state.f.board.contains_key(&msg.step) {
+        return Err("In InfAfterStep, `step` is not occupied; illegal");
+    }
+
+    let perspective = match old_state.whose_turn {
+        absolute::Side::IASide => cetkaik_core::perspective::Perspective::IaIsUpAndPointsDownward,
+        absolute::Side::ASide => cetkaik_core::perspective::Perspective::IaIsDownAndPointsUpward,
+    };
+
+    let candidates = cetkaik_yhuap_move_candidates::not_from_hand_candidates_(
+        &cetkaik_yhuap_move_candidates::Config {
+            allow_kut2tam2: true,
+        },
+        &cetkaik_yhuap_move_candidates::PureGameState {
+            perspective,
+            opponent_has_just_moved_tam: old_state.tam_has_moved_previously,
+            tam_itself_is_tam_hue: config.tam_itself_is_tam_hue,
+            f: cetkaik_yhuap_move_candidates::to_relative_field(old_state.f.clone(), perspective),
+        },
+    );
+
+    if !candidates
+        .into_iter()
+        .filter(|cand| match cand {
+            cetkaik_yhuap_move_candidates::PureMove::InfAfterStep {
+                src,
+                step,
+                planned_direction: _,
+            } => *src == msg.src && *step == msg.step,
+            _ => false,
+        })
+        .count()
+        > 0
+    {
+        return Err(
+            "The provided InfAfterStep was rejected by the crate `cetkaik_yhuap_move_candidates`.",
+        );
+    }
+
     let c = state::CWithoutCiurl {
         f: old_state.f.clone(),
         whose_turn: old_state.whose_turn,
@@ -419,7 +462,7 @@ pub fn apply_inf_after_step(
         rate: old_state.rate,
     };
 
-    Probabilistic::Sticks {
+    Ok(Probabilistic::Sticks {
         s0: state::C {
             c: c.clone(),
             ciurl: 0,
@@ -444,7 +487,7 @@ pub fn apply_inf_after_step(
             c: c.clone(),
             ciurl: 5,
         },
-    }
+    })
 }
 
 fn move_nontam_piece_from_src_to_dest_while_taking_opponent_piece_if_needed(
