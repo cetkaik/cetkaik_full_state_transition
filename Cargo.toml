@@ -1,12 +1,14 @@
 [package]
-name = "cetkaik_full_state_transition"
-version = "0.1.0"
 authors = ["jekto_vatimeliju <jekto.vatimeliju@gmail.com>"]
 edition = "2018"
+name = "cetkaik_full_state_transition"
+version = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cetkaik_core = "0.1.17"
+cetkaik_calculate_hand = "0.1.1"
+cetkaik_core = "0.1.20"
 cetkaik_yhuap_move_candidates = "0.1.0"
 readonly = "0.2.0"
+maplit = "1.0.2"

@@ -120,15 +120,26 @@ pub enum Rate {
 use probabilistic::Probabilistic;
 
 impl Rate {
-    pub fn next(self) -> Option<Self> {
+    pub fn next(self) -> Self {
         match self {
-            Rate::X1 => Some(Rate::X2),
-            Rate::X2 => Some(Rate::X4),
-            Rate::X4 => Some(Rate::X8),
-            Rate::X8 => Some(Rate::X16),
-            Rate::X16 => Some(Rate::X32),
-            Rate::X32 => Some(Rate::X64),
-            Rate::X64 => Some(Rate::X64),
+            Rate::X1 => Rate::X2,
+            Rate::X2 => Rate::X4,
+            Rate::X4 => Rate::X8,
+            Rate::X8 => Rate::X16,
+            Rate::X16 => Rate::X32,
+            Rate::X32 => Rate::X64,
+            Rate::X64 => Rate::X64,
+        }
+    }
+    pub fn num(self) -> i32 {
+        match self {
+            Rate::X1 => 1,
+            Rate::X2 => 2,
+            Rate::X4 => 4,
+            Rate::X8 => 8,
+            Rate::X16 => 16,
+            Rate::X32 => 32,
+            Rate::X64 => 64,
         }
     }
 }
@@ -188,7 +199,7 @@ fn apply_tam_move(
     first_dest: absolute::Coord,
     second_dest: absolute::Coord,
     step: Option<absolute::Coord>,
-    config: Config
+    config: Config,
 ) -> Result<Probabilistic<ExistenceOfHandNotResolved>, &'static str> {
     let mut new_field = old_state.f.clone();
     let expect_tam = new_field
@@ -232,7 +243,7 @@ fn apply_nontam_move(
     src: absolute::Coord,
     dest: absolute::Coord,
     step: Option<absolute::Coord>,
-    config: Config
+    config: Config,
 ) -> Result<Probabilistic<ExistenceOfHandNotResolved>, &'static str> {
     let nothing_happened = ExistenceOfHandNotResolved {
         previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
@@ -310,7 +321,7 @@ fn apply_nontam_move(
 pub fn apply_normal_move(
     old_state: &StateA,
     msg: NormalMove,
-    config: Config
+    config: Config,
 ) -> Result<Probabilistic<ExistenceOfHandNotResolved>, &'static str> {
     match msg {
         NormalMove::NonTamMoveFromHand { color, prof, dest } => {
@@ -371,7 +382,11 @@ pub fn apply_normal_move(
     }
 }
 
-pub fn apply_inf_after_step(old_state: &StateA, msg: InfAfterStep, config: Config) -> Probabilistic<StateC> {
+pub fn apply_inf_after_step(
+    old_state: &StateA,
+    msg: InfAfterStep,
+    config: Config,
+) -> Probabilistic<StateC> {
     let c = StateCWithoutCiurl {
         f: old_state.f.clone(),
         whose_turn: old_state.whose_turn,
@@ -459,7 +474,7 @@ fn move_nontam_piece_from_src_to_dest_while_taking_opponent_piece_if_needed(
 pub fn apply_after_half_acceptance(
     old_state: &StateC,
     msg: AfterHalfAcceptance,
-    config: Config
+    config: Config,
 ) -> Result<Probabilistic<ExistenceOfHandNotResolved>, &'static str> {
     let nothing_happened = ExistenceOfHandNotResolved {
         previous_a_side_hop1zuo1: old_state.c.f.a_side_hop1zuo1.clone(),
@@ -532,13 +547,13 @@ pub fn apply_after_half_acceptance(
         }
     } else {
         // the only possible side effect is that Stepping Tam might
-        // modify the score. Water entry cannot fail,
+        // modify the score (this side effect is to be handled by `resolve`). Water entry cannot fail,
         // since the piece has not actually moved.
-        // 唯一ありえる副作用は、撃皇で点が減っている可能性があるということ
+        // 唯一ありえる副作用は、撃皇で点が減っている可能性があるということ（それは `resolve` で処理される）。
         // パスが発生した以上、駒の動きは実際には発生していないので、
         // 入水判定は発生していない。
 
-        unimplemented!("if step tam edit score")
+        return Ok(Probabilistic::Pure(nothing_happened));
     }
 }
 
@@ -553,10 +568,17 @@ pub fn apply_after_half_acceptance(
 /// `Config` が要求されることになる。
 pub enum ExistenceOfHandResolved {
     NeitherTymokNorTaxot(StateA),
-    HandExists {
-        if_tymok: StateA,
-        if_taxot: Probabilistic<StateA>,
-    },
+    HandExists { if_tymok: StateA, if_taxot: IfTaxot },
+}
+
+pub enum IfTaxot {
+    NextTurn(Probabilistic<StateA>),
+
+    /// if VictoriousSide(Some(SideA)), SideA has won; if VictoriousSide(Some(SideIA)), SideIA has won.
+    /// if VictoriousSide(None), the game is a draw.
+    /// VictoriousSide(Some(SideA)) なら SideA が勝っており、 VictoriousSide(Some(SideIA)) なら SideIA が勝っている。
+    /// VictoriousSide(None) なら引き分けである。
+    VictoriousSide(Option<absolute::Side>),
 }
 
 pub struct Config {
@@ -564,7 +586,136 @@ pub struct Config {
     pub tam_itself_is_tam_hue: bool,
 }
 
-pub fn resolve(state: ExistenceOfHandResolved, config: Config) -> ExistenceOfHandResolved {
-    unimplemented!()
+pub fn resolve(state: ExistenceOfHandNotResolved, config: Config) -> ExistenceOfHandResolved {
+    use cetkaik_calculate_hand::{calculate_hands_and_score_from_pieces, ScoreAndHands};
+    let tymoxtaxot_because_of_kut2tam2 = state.kut2tam2_happened && config.step_tam_is_a_hand;
+
+    let tymoxtaxot_because_of_newly_acquired: Option<i32> = match state.whose_turn {
+        absolute::Side::ASide => {
+            if state.previous_a_side_hop1zuo1 == state.f.a_side_hop1zuo1 {
+                None
+            } else {
+                let ScoreAndHands {
+                    score: _,
+                    hands: old_hands,
+                } = calculate_hands_and_score_from_pieces(&state.previous_a_side_hop1zuo1).unwrap();
+                let ScoreAndHands {
+                    score: new_score,
+                    hands: new_hands,
+                } = calculate_hands_and_score_from_pieces(&state.f.a_side_hop1zuo1).unwrap();
+
+                // whether newly-acquired hand exists
+                if new_hands.difference(&old_hands).count() > 0 {
+                    Some(new_score)
+                } else {
+                    None
+                }
+            }
+        }
+        absolute::Side::IASide => {
+            if state.previous_ia_side_hop1zuo1 == state.f.ia_side_hop1zuo1 {
+                None
+            } else {
+                let ScoreAndHands {
+                    score: _,
+                    hands: old_hands,
+                } = calculate_hands_and_score_from_pieces(&state.previous_ia_side_hop1zuo1)
+                    .unwrap();
+                let ScoreAndHands {
+                    score: new_score,
+                    hands: new_hands,
+                } = calculate_hands_and_score_from_pieces(&state.f.ia_side_hop1zuo1).unwrap();
+
+                // whether newly-acquired hand exists
+                if new_hands.difference(&old_hands).count() > 0 {
+                    Some(new_score)
+                } else {
+                    None
+                }
+            }
+        }
+    };
+
+    let raw_score = match (
+        tymoxtaxot_because_of_kut2tam2,
+        tymoxtaxot_because_of_newly_acquired,
+    ) {
+        // nothing happened; hand the turn to the next person
+        // 役ができていないので、次の人に手番を渡す
+        // この際、step_tam_is_a_handがfalseの場合、5点×レートを引くだけ引く。
+        (false, None) => {
+            return ExistenceOfHandResolved::NeitherTymokNorTaxot(StateA {
+                f: state.f.clone(),
+                whose_turn: !state.whose_turn, /* hand the turn to the next person */
+                season: state.season,
+                ia_owner_s_score: state.ia_owner_s_score
+                    + if state.kut2tam2_happened {
+                        state.rate.num()
+                    } else {
+                        0
+                    } * match state.whose_turn {
+                        absolute::Side::IASide => -5,
+                        absolute::Side::ASide => 5,
+                    },
+                rate: state.rate,
+                tam_has_moved_previously: state.tam_has_moved_previously,
+            });
+        }
+
+        (false, Some(score)) => score,
+        (true, None) => -5,
+        (true, Some(score)) => score - 5,
+    };
+
+    let increment_in_ia_owner_s_score = match state.whose_turn {
+        absolute::Side::IASide => 1,
+        absolute::Side::ASide => -1,
+    } * state.rate.num()
+        * raw_score;
+
+    let new_ia_owner_s_score =
+        0.min(40.max(state.ia_owner_s_score + increment_in_ia_owner_s_score));
+    let if_taxot = if new_ia_owner_s_score == 40 {
+        IfTaxot::VictoriousSide(Some(absolute::Side::IASide))
+    } else if new_ia_owner_s_score == 0 {
+        IfTaxot::VictoriousSide(Some(absolute::Side::ASide))
+    } else if let Some(next_season) = state.season.next() {
+        let ia_first = StateA {
+            whose_turn: absolute::Side::IASide,
+            ia_owner_s_score: new_ia_owner_s_score,
+            rate: Rate::X1,
+            season: next_season,
+            tam_has_moved_previously: state.tam_has_moved_previously,
+            f: absolute::Field {
+                a_side_hop1zuo1: vec![],
+                ia_side_hop1zuo1: vec![],
+                board: cetkaik_core::absolute::yhuap_initial_board(),
+            },
+        };
+        let mut a_first = ia_first.clone();
+        a_first.whose_turn = absolute::Side::ASide;
+        IfTaxot::NextTurn(Probabilistic::WhoGoesFirst { ia_first, a_first })
+    } else {
+        /* All seasons have ended */
+        use std::cmp::Ordering;
+        match new_ia_owner_s_score.cmp(&(40 - new_ia_owner_s_score)) {
+            Ordering::Greater => IfTaxot::VictoriousSide(Some(absolute::Side::IASide)),
+            Ordering::Less => IfTaxot::VictoriousSide(Some(absolute::Side::ASide)),
+            Ordering::Equal => IfTaxot::VictoriousSide(None),
+        }
+    };
+
+    ExistenceOfHandResolved::HandExists {
+        if_tymok: StateA {
+            f: state.f.clone(),
+            whose_turn: !state.whose_turn, /* hand the turn to the next person */
+            season: state.season,
+            ia_owner_s_score: state.ia_owner_s_score,
+            rate: state.rate.next(), /* double the stake */
+            tam_has_moved_previously: state.tam_has_moved_previously,
+        },
+
+        if_taxot,
+    }
 }
 
