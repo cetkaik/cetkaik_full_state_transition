@@ -107,7 +107,6 @@ fn apply_tam_move(
     first_dest: absolute::Coord,
     second_dest: absolute::Coord,
     step: Option<absolute::Coord>,
-    config: Config,
 ) -> Result<Probabilistic<state::HandNotResolved>, &'static str> {
     let mut new_field = old_state.f.clone();
     let expect_tam = new_field
@@ -151,7 +150,6 @@ fn apply_nontam_move(
     src: absolute::Coord,
     dest: absolute::Coord,
     step: Option<absolute::Coord>,
-    config: Config,
 ) -> Result<Probabilistic<state::HandNotResolved>, &'static str> {
     let nothing_happened = state::HandNotResolved {
         previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
@@ -233,6 +231,31 @@ pub fn apply_normal_move(
 ) -> Result<Probabilistic<state::HandNotResolved>, &'static str> {
     use cetkaik_yhuap_move_candidates::*;
 
+    // must set it so that old_state.whose_turn points downward
+    let perspective = match old_state.whose_turn {
+        absolute::Side::IASide => cetkaik_core::perspective::Perspective::IaIsUpAndPointsDownward,
+        absolute::Side::ASide => cetkaik_core::perspective::Perspective::IaIsDownAndPointsUpward,
+    };
+
+    let hop1zuo1_candidates = from_hand_candidates(&PureGameState {
+        perspective,
+        opponent_has_just_moved_tam: old_state.tam_has_moved_previously,
+        tam_itself_is_tam_hue: config.tam_itself_is_tam_hue,
+        f: to_relative_field(old_state.f.clone(), perspective),
+    });
+
+    let candidates = not_from_hand_candidates_(
+        &cetkaik_yhuap_move_candidates::Config {
+            allow_kut2tam2: true,
+        },
+        &PureGameState {
+            perspective,
+            opponent_has_just_moved_tam: old_state.tam_has_moved_previously,
+            tam_itself_is_tam_hue: config.tam_itself_is_tam_hue,
+            f: to_relative_field(old_state.f.clone(), perspective),
+        },
+    );
+
     match msg {
         message::NormalMove::NonTamMoveFromHand { color, prof, dest } => {
             let mut new_field = old_state
@@ -263,24 +286,7 @@ pub fn apply_normal_move(
             // ここで弾かれるとしたらコードがバグっているということになる。
             // したがって、 return Err ではなく unreachable としてある。
             {
-                // must set it so that old_state.whose_turn points downward
-                let perspective = match old_state.whose_turn {
-                    absolute::Side::IASide => {
-                        cetkaik_core::perspective::Perspective::IaIsUpAndPointsDownward
-                    }
-                    absolute::Side::ASide => {
-                        cetkaik_core::perspective::Perspective::IaIsDownAndPointsUpward
-                    }
-                };
-
-                let hand_candidates = from_hand_candidates(&PureGameState {
-                    perspective,
-                    opponent_has_just_moved_tam: old_state.tam_has_moved_previously,
-                    tam_itself_is_tam_hue: config.tam_itself_is_tam_hue,
-                    f: to_relative_field(old_state.f.clone(), perspective),
-                });
-
-                if !hand_candidates.contains(
+                if !hop1zuo1_candidates.contains(
                     &cetkaik_yhuap_move_candidates::PureMove::NonTamMoveFromHand {
                         color,
                         prof,
@@ -307,25 +313,93 @@ pub fn apply_normal_move(
             src,
             first_dest,
             second_dest,
-        } => return apply_tam_move(old_state, src, first_dest, second_dest, None, config),
+        } => {
+            if candidates.contains(&cetkaik_yhuap_move_candidates::PureMove::TamMoveNoStep {
+                src,
+                first_dest,
+                second_dest,
+            }) {
+                return apply_tam_move(old_state, src, first_dest, second_dest, None);
+            } else {
+                return Err("The provided TamMoveNoStep was rejected by the crate `cetkaik_yhuap_move_candidates`.");
+            }
+        }
         message::NormalMove::TamMoveStepsDuringFormer {
             src,
             first_dest,
             second_dest,
             step,
+        } => {
+            if candidates.contains(
+                &cetkaik_yhuap_move_candidates::PureMove::TamMoveStepsDuringFormer {
+                    src,
+                    first_dest,
+                    second_dest,
+                    step,
+                },
+            ) {
+                return apply_tam_move(old_state, src, first_dest, second_dest, Some(step));
+            } else {
+                return Err("The provided TamMoveStepsDuringFormer was rejected by the crate `cetkaik_yhuap_move_candidates`.");
+            }
         }
-        | message::NormalMove::TamMoveStepsDuringLatter {
+        message::NormalMove::TamMoveStepsDuringLatter {
             src,
             first_dest,
             second_dest,
             step,
-        } => return apply_tam_move(old_state, src, first_dest, second_dest, Some(step), config),
+        } => {
+            if candidates.contains(
+                &cetkaik_yhuap_move_candidates::PureMove::TamMoveStepsDuringLatter {
+                    src,
+                    first_dest,
+                    second_dest,
+                    step,
+                },
+            ) {
+                return apply_tam_move(old_state, src, first_dest, second_dest, Some(step));
+            } else {
+                return Err("The provided TamMoveStepsDuringLatter was rejected by the crate `cetkaik_yhuap_move_candidates`.");
+            }
+        }
 
         message::NormalMove::NonTamMoveSrcDst { src, dest } => {
-            return apply_nontam_move(old_state, src, dest, None, config)
+            if candidates.contains(&cetkaik_yhuap_move_candidates::PureMove::NonTamMoveSrcDst {
+                src,
+                dest,
+                is_water_entry_ciurl: true,
+            }) || candidates.contains(
+                &cetkaik_yhuap_move_candidates::PureMove::NonTamMoveSrcDst {
+                    src,
+                    dest,
+                    is_water_entry_ciurl: false,
+                },
+            ) {
+                return apply_nontam_move(old_state, src, dest, None);
+            } else {
+                return Err("The provided NonTamMoveSrcDst was rejected by the crate `cetkaik_yhuap_move_candidates`.");
+            }
         }
         message::NormalMove::NonTamMoveSrcStepDstFinite { src, step, dest } => {
-            return apply_nontam_move(old_state, src, dest, Some(step), config)
+            if candidates.contains(
+                &cetkaik_yhuap_move_candidates::PureMove::NonTamMoveSrcStepDstFinite {
+                    src,
+                    step,
+                    dest,
+                    is_water_entry_ciurl: true,
+                },
+            ) || candidates.contains(
+                &cetkaik_yhuap_move_candidates::PureMove::NonTamMoveSrcStepDstFinite {
+                    src,
+                    step,
+                    dest,
+                    is_water_entry_ciurl: false,
+                },
+            ) {
+                return apply_nontam_move(old_state, src, dest, Some(step));
+            } else {
+                return Err("The provided NonTamMoveSrcStepDstFinite was rejected by the crate `cetkaik_yhuap_move_candidates`.");
+            }
         }
     }
 }
