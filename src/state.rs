@@ -1,4 +1,4 @@
-use super::*;
+use super::{absolute, state, IfTaxot, Rate, Season};
 /// Normal state. ／一番普通の状態。
 #[derive(Clone, Debug)]
 pub struct A {

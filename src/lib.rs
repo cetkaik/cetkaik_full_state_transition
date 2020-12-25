@@ -1,6 +1,7 @@
+#![warn(clippy::pedantic)]
+#![allow(clippy::too_many_lines, clippy::missing_errors_doc)]
 /// Represents the season. Currently, only four-season games are supported.
 /// ／季節を表現する。今のところ4季制のことしか考えていない。
-#[warn(clippy::pedantic)]
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Hash)]
 pub enum Season {
     ///春, Spring
@@ -22,6 +23,7 @@ pub mod message;
 pub mod probabilistic;
 
 impl Season {
+    #[must_use]
     pub fn next(self) -> Option<Self> {
         match self {
             Season::Iei2 => Some(Season::Xo1),
@@ -31,6 +33,7 @@ impl Season {
         }
     }
 
+    #[must_use]
     pub fn to_index(self) -> usize {
         match self {
             Season::Iei2 => 0,
@@ -45,10 +48,11 @@ use cetkaik_core::absolute;
 
 /// Describes the state that the game is in.
 /// ／ゲームの状態を表現する型。状態遷移図は複雑なので、詳しくはプレゼン
-/// https://docs.google.com/presentation/d/1IL8lelkw3oZif3QUQaKzGCPCLiBguM2kXjgOx9Cgetw/edit#slide=id.g788f78d7d6_0_0 または画像 https://pbs.twimg.com/media/EqCkMhXUcAIynsd?format=png&name=900x900 を参照すること。
+/// <https://docs.google.com/presentation/d/1IL8lelkw3oZif3QUQaKzGCPCLiBguM2kXjgOx9Cgetw/edit#slide=id.g788f78d7d6_0_0> または画像 <https://pbs.twimg.com/media/EqCkMhXUcAIynsd?format=png&name=900x900> を参照すること。
 pub mod state;
 
 impl state::C {
+    #[must_use]
     pub fn piece_at_flying_piece_src(&self) -> absolute::Piece {
         *self
             .c
@@ -58,6 +62,7 @@ impl state::C {
             .expect("Invalid state::C: at flying_piece_src there is no piece")
     }
 
+    #[must_use]
     pub fn piece_at_flying_piece_step(&self) -> absolute::Piece {
         *self
             .c
@@ -87,6 +92,7 @@ pub enum Rate {
 use probabilistic::Probabilistic;
 
 impl Rate {
+    #[must_use]
     pub fn next(self) -> Self {
         match self {
             Rate::X1 => Rate::X2,
@@ -94,10 +100,11 @@ impl Rate {
             Rate::X4 => Rate::X8,
             Rate::X8 => Rate::X16,
             Rate::X16 => Rate::X32,
-            Rate::X32 => Rate::X64,
-            Rate::X64 => Rate::X64,
+            Rate::X32 | Rate::X64 => Rate::X64,
         }
     }
+
+    #[must_use]
     pub fn num(self) -> i32 {
         match self {
             Rate::X1 => 1,
@@ -244,7 +251,9 @@ pub fn apply_normal_move(
     msg: message::NormalMove,
     config: Config,
 ) -> Result<Probabilistic<state::HandNotResolved>, &'static str> {
-    use cetkaik_yhuap_move_candidates::*;
+    use cetkaik_yhuap_move_candidates::{
+        from_hand_candidates, not_from_hand_candidates_, to_relative_field, PureGameState,
+    };
 
     // must set it so that old_state.whose_turn points downward
     let perspective = match old_state.whose_turn {
@@ -691,7 +700,7 @@ pub fn apply_after_half_acceptance(
     }
 }
 
-/// An auxiliary type that represents whether we should terminate the game or proceed to the next season if the player chose to end the current season. 
+/// An auxiliary type that represents whether we should terminate the game or proceed to the next season if the player chose to end the current season.
 /// ／もし終季が選ばれた際、次の季節に進むのか、それともゲームが終了するのかを保持するための補助的な型。
 pub enum IfTaxot {
     NextSeason(Probabilistic<state::A>),
@@ -705,6 +714,7 @@ pub enum IfTaxot {
 
 /// Describes the minor differences between the numerous rule variants.
 /// ／細かなルール差を吸収するための型。
+#[derive(Clone, Debug, Copy, PartialEq, Eq, Hash)]
 pub struct Config {
     /// Describes whether the Stepping of Tam2 is considered a hand. If `false`, the Stepping of Tam2 results in the immediate subtraction of 5 points and does not trigger the taxot / tymok unless another hand is simultaneously created.
     /// ／撃皇が役であるかどうかのフラグ。`false`である場合、撃皇は即時5点減点であり、同時に他の役が成立していない限り終季・再行の判定を発生させない。
@@ -722,7 +732,8 @@ pub struct Config {
 }
 
 /// Sends `HandNotResolved` to `HandResolved`.
-pub fn resolve(state: state::HandNotResolved, config: Config) -> state::HandResolved {
+#[must_use]
+pub fn resolve(state: &state::HandNotResolved, config: Config) -> state::HandResolved {
     use cetkaik_calculate_hand::{calculate_hands_and_score_from_pieces, ScoreAndHands};
     let tymoxtaxot_because_of_kut2tam2 = state.kut2tam2_happened && config.step_tam_is_a_hand;
 
@@ -815,16 +826,21 @@ pub fn resolve(state: state::HandNotResolved, config: Config) -> state::HandReso
         IfTaxot::VictoriousSide(Some(absolute::Side::IASide))
     } else if new_ia_owner_s_score == 0 {
         IfTaxot::VictoriousSide(Some(absolute::Side::ASide))
-    } else if let Some(next_season) = state.season.next() {
-        IfTaxot::NextSeason(beginning_of_season(next_season, new_ia_owner_s_score))
     } else {
-        /* All seasons have ended */
-        use std::cmp::Ordering;
-        match new_ia_owner_s_score.cmp(&(40 - new_ia_owner_s_score)) {
-            Ordering::Greater => IfTaxot::VictoriousSide(Some(absolute::Side::IASide)),
-            Ordering::Less => IfTaxot::VictoriousSide(Some(absolute::Side::ASide)),
-            Ordering::Equal => IfTaxot::VictoriousSide(None),
-        }
+        state.season.next().map_or(
+            /* All seasons have ended */
+            match new_ia_owner_s_score.cmp(&(40 - new_ia_owner_s_score)) {
+                std::cmp::Ordering::Greater => {
+                    IfTaxot::VictoriousSide(Some(absolute::Side::IASide))
+                }
+                std::cmp::Ordering::Less => IfTaxot::VictoriousSide(Some(absolute::Side::ASide)),
+                std::cmp::Ordering::Equal => IfTaxot::VictoriousSide(None),
+            },
+            /* The next season exists */
+            |next_season| {
+                IfTaxot::NextSeason(beginning_of_season(next_season, new_ia_owner_s_score))
+            },
+        )
     };
 
     state::HandResolved::HandExists {
@@ -842,7 +858,8 @@ pub fn resolve(state: state::HandNotResolved, config: Config) -> state::HandReso
 }
 
 /// Start of the game, with the season in spring and each player holding 20 points
-/// ／ゲーム開始、季節は春で所持点は20 
+/// ／ゲーム開始、季節は春で所持点は20
+#[must_use]
 pub fn initial_state() -> Probabilistic<state::A> {
     beginning_of_season(Season::Iei2, 20)
 }
