@@ -107,7 +107,12 @@ fn apply_tam_move(
     first_dest: absolute::Coord,
     second_dest: absolute::Coord,
     step: Option<absolute::Coord>,
+    config: Config,
 ) -> Result<Probabilistic<state::HandNotResolved>, &'static str> {
+    if !config.it_is_allowed_to_move_tam_immediately_after_tam_has_moved && old_state.tam_has_moved_previously {
+        return Err("By config, it is prohibited for tam2 to move immediately after the previous player has moved the tam2.")
+    }
+
     let mut new_field = old_state.f.clone();
     let expect_tam = new_field
         .board
@@ -137,7 +142,7 @@ fn apply_tam_move(
         previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
         kut2tam2_happened: false,
         rate: old_state.rate,
-        tam_has_moved_previously: true,
+        i_have_moved_tam_in_this_turn: true,
         season: old_state.season,
         ia_owner_s_score: old_state.ia_owner_s_score,
         whose_turn: old_state.whose_turn,
@@ -162,7 +167,7 @@ fn apply_nontam_move(
             },
         },
         rate: old_state.rate,
-        tam_has_moved_previously: false,
+        i_have_moved_tam_in_this_turn: false,
         season: old_state.season,
         ia_owner_s_score: old_state.ia_owner_s_score,
         whose_turn: old_state.whose_turn,
@@ -203,7 +208,7 @@ fn apply_nontam_move(
         previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
         kut2tam2_happened: false,
         rate: old_state.rate,
-        tam_has_moved_previously: false,
+        i_have_moved_tam_in_this_turn: false,
         season: old_state.season,
         ia_owner_s_score: old_state.ia_owner_s_score,
         whose_turn: old_state.whose_turn,
@@ -302,7 +307,7 @@ pub fn apply_normal_move(
                 previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
                 kut2tam2_happened: false,
                 rate: old_state.rate,
-                tam_has_moved_previously: false,
+                i_have_moved_tam_in_this_turn: false,
                 season: old_state.season,
                 ia_owner_s_score: old_state.ia_owner_s_score,
                 whose_turn: old_state.whose_turn,
@@ -319,7 +324,7 @@ pub fn apply_normal_move(
                 first_dest,
                 second_dest,
             }) {
-                return apply_tam_move(old_state, src, first_dest, second_dest, None);
+                return apply_tam_move(old_state, src, first_dest, second_dest, None, config);
             } else {
                 return Err("The provided TamMoveNoStep was rejected by the crate `cetkaik_yhuap_move_candidates`.");
             }
@@ -338,7 +343,7 @@ pub fn apply_normal_move(
                     step,
                 },
             ) {
-                return apply_tam_move(old_state, src, first_dest, second_dest, Some(step));
+                return apply_tam_move(old_state, src, first_dest, second_dest, Some(step), config);
             } else {
                 return Err("The provided TamMoveStepsDuringFormer was rejected by the crate `cetkaik_yhuap_move_candidates`.");
             }
@@ -357,7 +362,7 @@ pub fn apply_normal_move(
                     step,
                 },
             ) {
-                return apply_tam_move(old_state, src, first_dest, second_dest, Some(step));
+                return apply_tam_move(old_state, src, first_dest, second_dest, Some(step), config);
             } else {
                 return Err("The provided TamMoveStepsDuringLatter was rejected by the crate `cetkaik_yhuap_move_candidates`.");
             }
@@ -546,7 +551,7 @@ pub fn apply_after_half_acceptance(
         previous_ia_side_hop1zuo1: old_state.c.f.ia_side_hop1zuo1.clone(),
         kut2tam2_happened: old_state.piece_at_flying_piece_step().is_tam2(),
         rate: old_state.c.rate,
-        tam_has_moved_previously: false,
+        i_have_moved_tam_in_this_turn: false,
         season: old_state.c.season,
         ia_owner_s_score: old_state.c.ia_owner_s_score,
         whose_turn: old_state.c.whose_turn,
@@ -643,7 +648,7 @@ pub fn apply_after_half_acceptance(
             previous_ia_side_hop1zuo1: old_state.c.f.ia_side_hop1zuo1.clone(),
             kut2tam2_happened: old_state.piece_at_flying_piece_step().is_tam2(),
             rate: old_state.c.rate,
-            tam_has_moved_previously: false,
+            i_have_moved_tam_in_this_turn: false,
             season: old_state.c.season,
             ia_owner_s_score: old_state.c.ia_owner_s_score,
             whose_turn: old_state.c.whose_turn,
@@ -691,6 +696,12 @@ pub enum IfTaxot {
 pub struct Config {
     pub step_tam_is_a_hand: bool,
     pub tam_itself_is_tam_hue: bool,
+
+    /// hsjoihs 2020/02/18
+    /// 「@SY 皇をもとの位置に戻す皇再来と、相手が動かした後の皇動かしによる皇再来を言い分けたいときってどうするんだろう（cerke_onlineは後者のみを禁じており、前者に関しては無罰則）」
+    /// SY 2020/02/18 - 2020/02/19
+    /// 「前者は皇無行とかっぽそう。後者が狭義の皇再来なのかもしれん。ただややこしい」
+    pub it_is_allowed_to_move_tam_immediately_after_tam_has_moved: bool,
 }
 
 pub fn resolve(state: state::HandNotResolved, config: Config) -> state::HandResolved {
@@ -765,7 +776,7 @@ pub fn resolve(state: state::HandNotResolved, config: Config) -> state::HandReso
                         absolute::Side::ASide => 5,
                     },
                 rate: state.rate,
-                tam_has_moved_previously: state.tam_has_moved_previously,
+                tam_has_moved_previously: state.i_have_moved_tam_in_this_turn,
             });
         }
 
@@ -805,7 +816,7 @@ pub fn resolve(state: state::HandNotResolved, config: Config) -> state::HandReso
             season: state.season,
             ia_owner_s_score: state.ia_owner_s_score,
             rate: state.rate.next(), /* double the stake */
-            tam_has_moved_previously: state.tam_has_moved_previously,
+            tam_has_moved_previously: state.i_have_moved_tam_in_this_turn,
         },
 
         if_taxot,

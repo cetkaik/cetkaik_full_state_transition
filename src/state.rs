@@ -40,7 +40,7 @@ pub struct HandNotResolved {
     pub season: Season,
     pub ia_owner_s_score: i32,
     pub rate: Rate,
-    pub tam_has_moved_previously: bool,
+    pub i_have_moved_tam_in_this_turn: bool,
     pub previous_a_side_hop1zuo1: Vec<absolute::NonTam2Piece>,
     pub previous_ia_side_hop1zuo1: Vec<absolute::NonTam2Piece>,
     pub kut2tam2_happened: bool,
