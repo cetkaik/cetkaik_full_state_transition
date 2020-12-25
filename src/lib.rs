@@ -132,6 +132,10 @@ fn apply_tam_move(
         return Err("By config, it is prohibited for tam2 to move immediately after the previous player has moved the tam2.");
     }
 
+    if !config.tam_mun_mok_is_allowed && src == second_dest {
+        return Err("By config, it is prohibited for tam2 to start and end at the same position.");
+    }
+
     let mut new_field = old_state.f.clone();
     let expect_tam = new_field
         .board
@@ -714,6 +718,7 @@ pub enum IfTaxot {
 
 /// Describes the minor differences between the numerous rule variants.
 /// ／細かなルール差を吸収するための型。
+#[readonly::make]
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Hash)]
 pub struct Config {
     /// Describes whether the Stepping of Tam2 is considered a hand. If `false`, the Stepping of Tam2 results in the immediate subtraction of 5 points and does not trigger the taxot / tymok unless another hand is simultaneously created.
@@ -729,6 +734,12 @@ pub struct Config {
     /// SY 2020/02/18 - 2020/02/19
     /// 「前者は皇無行とかっぽそう。後者が狭義の皇再来なのかもしれん。ただややこしい」
     pub it_is_allowed_to_move_tam_immediately_after_tam_has_moved: bool,
+
+    /// hsjoihs 2020/02/18
+    /// 「@SY 皇をもとの位置に戻す皇再来と、相手が動かした後の皇動かしによる皇再来を言い分けたいときってどうするんだろう（cerke_onlineは後者のみを禁じており、前者に関しては無罰則）」
+    /// SY 2020/02/18 - 2020/02/19
+    /// 「前者は皇無行とかっぽそう。後者が狭義の皇再来なのかもしれん。ただややこしい」
+    pub tam_mun_mok_is_allowed: bool,
 }
 
 /// Sends `HandNotResolved` to `HandResolved`.
