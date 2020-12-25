@@ -557,7 +557,7 @@ pub fn apply_after_half_acceptance(
         c: state::CWithoutCiurl {
             flying_piece_src, ..
         },
-        ciurl
+        ciurl,
     } = *old_state;
 
     if let Some(dest) = msg.dest {
@@ -787,21 +787,7 @@ pub fn resolve(state: state::HandNotResolved, config: Config) -> state::HandReso
     } else if new_ia_owner_s_score == 0 {
         IfTaxot::VictoriousSide(Some(absolute::Side::ASide))
     } else if let Some(next_season) = state.season.next() {
-        let ia_first = state::A {
-            whose_turn: absolute::Side::IASide,
-            ia_owner_s_score: new_ia_owner_s_score,
-            rate: Rate::X1,
-            season: next_season,
-            tam_has_moved_previously: state.tam_has_moved_previously,
-            f: absolute::Field {
-                a_side_hop1zuo1: vec![],
-                ia_side_hop1zuo1: vec![],
-                board: cetkaik_core::absolute::yhuap_initial_board(),
-            },
-        };
-        let mut a_first = ia_first.clone();
-        a_first.whose_turn = absolute::Side::ASide;
-        IfTaxot::NextTurn(Probabilistic::WhoGoesFirst { ia_first, a_first })
+        IfTaxot::NextTurn(beginning_of_season(next_season, new_ia_owner_s_score))
     } else {
         /* All seasons have ended */
         use std::cmp::Ordering;
@@ -824,4 +810,26 @@ pub fn resolve(state: state::HandNotResolved, config: Config) -> state::HandReso
 
         if_taxot,
     }
+}
+
+pub fn initial_state() -> Probabilistic<state::A> {
+    beginning_of_season(Season::Iei2, 20)
+}
+
+fn beginning_of_season(season: Season, ia_owner_s_score: i32) -> Probabilistic<state::A> {
+    let ia_first = state::A {
+        whose_turn: absolute::Side::IASide,
+        ia_owner_s_score,
+        rate: Rate::X1,
+        season,
+        tam_has_moved_previously: false,
+        f: absolute::Field {
+            a_side_hop1zuo1: vec![],
+            ia_side_hop1zuo1: vec![],
+            board: cetkaik_core::absolute::yhuap_initial_board(),
+        },
+    };
+    let mut a_first = ia_first.clone();
+    a_first.whose_turn = absolute::Side::ASide;
+    Probabilistic::WhoGoesFirst { ia_first, a_first }
 }
