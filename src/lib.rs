@@ -1,3 +1,5 @@
+/// Represents the season. Currently, only four-season games are supported.
+/// ／季節を表現する。今のところ4季制のことしか考えていない。
 #[warn(clippy::pedantic)]
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Hash)]
 pub enum Season {
@@ -11,7 +13,12 @@ pub enum Season {
     Iat1,
 }
 
+/// Describes the inputs from the players.
+/// ／プレイヤーからの入力を表現する。
 pub mod message;
+
+/// Describes the probability distribution of states. Exactly which state is reached depends on the server-side result of casting sticks.
+/// ／状態の確率分布を表現する。サーバー側で投げ棒を乱択することで、どの状態に至るかが決まる。
 pub mod probabilistic;
 
 impl Season {
@@ -36,6 +43,9 @@ impl Season {
 
 use cetkaik_core::absolute;
 
+/// Describes the state that the game is in.
+/// ／ゲームの状態を表現する型。状態遷移図は複雑なので、詳しくはプレゼン
+/// https://docs.google.com/presentation/d/1IL8lelkw3oZif3QUQaKzGCPCLiBguM2kXjgOx9Cgetw/edit#slide=id.g788f78d7d6_0_0 または画像 https://pbs.twimg.com/media/EqCkMhXUcAIynsd?format=png&name=900x900 を参照すること。
 pub mod state;
 
 impl state::C {
@@ -58,13 +68,13 @@ impl state::C {
     }
 }
 
+/// Theoretically speaking, it is necessary to distinguish x32 and x64
+/// because it is possible to score 1 point (3+3-5).
+/// Not that it will ever be of use in any real situation.
+/// ／3点役2つと-5点役一つを同時成立させることにより1点の得点を得ることが可能である。したがって、二人の得点の総和が40点である以上、32倍レートと64倍レートを区別する必要がある（32点を獲得することは必ずしも勝利を意味しないが、64点を獲得することは必ず勝利を意味するので）。
+///
 #[derive(Clone, Copy, Debug)]
 pub enum Rate {
-    /*
-     * Theoretically speaking, it is necessary to distinguish x32 and x64
-     * because it is possible to score 1 point (3+3-5).
-     * Not that it will ever be of use in any real situation.
-     */
     X1,
     X2,
     X4,
@@ -228,6 +238,7 @@ fn apply_nontam_move(
     Ok(Probabilistic::Pure(success))
 }
 
+/// `NormalMove` sends `A` to `Probabilistic<HandNotResolved>`
 pub fn apply_normal_move(
     old_state: &state::A,
     msg: message::NormalMove,
@@ -408,6 +419,7 @@ pub fn apply_normal_move(
     }
 }
 
+/// `InfAfterStep` sends `A` to `Probabilistic<C>`
 pub fn apply_inf_after_step(
     old_state: &state::A,
     msg: message::InfAfterStep,
@@ -537,6 +549,7 @@ fn move_nontam_piece_from_src_to_dest_while_taking_opponent_piece_if_needed(
     Ok((new_board, None))
 }
 
+/// `AfterHalfAcceptance` sends `C` to `Probabilistic<HandNotResolved>`
 pub fn apply_after_half_acceptance(
     old_state: &state::C,
     msg: message::AfterHalfAcceptance,
@@ -638,7 +651,6 @@ pub fn apply_after_half_acceptance(
             new_field.insert_nontam_piece_into_hop1zuo1(color, prof, old_state.c.whose_turn);
         };
 
-        // 入水判定不存在、または成功
         let success = state::HandNotResolved {
             previous_a_side_hop1zuo1: old_state.c.f.a_side_hop1zuo1.clone(),
             previous_ia_side_hop1zuo1: old_state.c.f.ia_side_hop1zuo1.clone(),
@@ -679,8 +691,10 @@ pub fn apply_after_half_acceptance(
     }
 }
 
+/// An auxiliary type that represents whether we should terminate the game or proceed to the next season if the player chose to end the current season. 
+/// ／もし終季が選ばれた際、次の季節に進むのか、それともゲームが終了するのかを保持するための補助的な型。
 pub enum IfTaxot {
-    NextTurn(Probabilistic<state::A>),
+    NextSeason(Probabilistic<state::A>),
 
     /// if VictoriousSide(Some(SideA)), SideA has won; if VictoriousSide(Some(SideIA)), SideIA has won.
     /// if VictoriousSide(None), the game is a draw.
@@ -689,8 +703,15 @@ pub enum IfTaxot {
     VictoriousSide(Option<absolute::Side>),
 }
 
+/// Describes the minor differences between the numerous rule variants.
+/// ／細かなルール差を吸収するための型。
 pub struct Config {
+    /// Describes whether the Stepping of Tam2 is considered a hand. If `false`, the Stepping of Tam2 results in the immediate subtraction of 5 points and does not trigger the taxot / tymok unless another hand is simultaneously created.
+    /// ／撃皇が役であるかどうかのフラグ。`false`である場合、撃皇は即時5点減点であり、同時に他の役が成立していない限り終季・再行の判定を発生させない。
     pub step_tam_is_a_hand: bool,
+
+    /// Described whether the square that Tam2 itself is in is considered as a tam2 hue. This matters only when you are stepping a Tam2.
+    /// ／皇のあるマス自身が皇処になるかどうかのフラグ。撃皇をするときにのみ関係のあるフラグ。
     pub tam_itself_is_tam_hue: bool,
 
     /// hsjoihs 2020/02/18
@@ -700,6 +721,7 @@ pub struct Config {
     pub it_is_allowed_to_move_tam_immediately_after_tam_has_moved: bool,
 }
 
+/// Sends `HandNotResolved` to `HandResolved`.
 pub fn resolve(state: state::HandNotResolved, config: Config) -> state::HandResolved {
     use cetkaik_calculate_hand::{calculate_hands_and_score_from_pieces, ScoreAndHands};
     let tymoxtaxot_because_of_kut2tam2 = state.kut2tam2_happened && config.step_tam_is_a_hand;
@@ -794,7 +816,7 @@ pub fn resolve(state: state::HandNotResolved, config: Config) -> state::HandReso
     } else if new_ia_owner_s_score == 0 {
         IfTaxot::VictoriousSide(Some(absolute::Side::ASide))
     } else if let Some(next_season) = state.season.next() {
-        IfTaxot::NextTurn(beginning_of_season(next_season, new_ia_owner_s_score))
+        IfTaxot::NextSeason(beginning_of_season(next_season, new_ia_owner_s_score))
     } else {
         /* All seasons have ended */
         use std::cmp::Ordering;
@@ -819,6 +841,8 @@ pub fn resolve(state: state::HandNotResolved, config: Config) -> state::HandReso
     }
 }
 
+/// Start of the game, with the season in spring and each player holding 20 points
+/// ／ゲーム開始、季節は春で所持点は20 
 pub fn initial_state() -> Probabilistic<state::A> {
     beginning_of_season(Season::Iei2, 20)
 }

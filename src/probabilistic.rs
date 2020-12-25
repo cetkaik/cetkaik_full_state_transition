@@ -1,3 +1,5 @@
+/// Describes the probability density due to the sticks cast.
+/// ／投げ棒に由来する確率分布。
 pub enum Probabilistic<T> {
     Pure(T),
     Water {
@@ -58,4 +60,7 @@ impl<T: Clone> Into<Prob<(T, Option<usize>)>> for Probabilistic<T> {
     }
 }
 
+/// Describes the general probability density.
+/// ／一般の確率分布。
+#[readonly::make]
 pub struct Prob<T>(pub Vec<(T, f64)>);
