@@ -34,10 +34,10 @@ impl<T: Clone> Into<Prob<(T, Option<usize>)>> for Probabilistic<T> {
             Probabilistic::Water { failure, success } => Prob(vec![
                 ((failure.clone(), Some(0)), 1.0 / 32.0),
                 ((failure.clone(), Some(1)), 5.0 / 32.0),
-                ((failure.clone(), Some(2)), 10.0 / 32.0),
+                ((failure, Some(2)), 10.0 / 32.0),
                 ((success.clone(), Some(3)), 10.0 / 32.0),
                 ((success.clone(), Some(4)), 5.0 / 32.0),
-                ((success.clone(), Some(5)), 1.0 / 32.0),
+                ((success, Some(5)), 1.0 / 32.0),
             ]),
             Probabilistic::Sticks {
                 s0,

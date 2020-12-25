@@ -109,8 +109,10 @@ fn apply_tam_move(
     step: Option<absolute::Coord>,
     config: Config,
 ) -> Result<Probabilistic<state::HandNotResolved>, &'static str> {
-    if !config.it_is_allowed_to_move_tam_immediately_after_tam_has_moved && old_state.tam_has_moved_previously {
-        return Err("By config, it is prohibited for tam2 to move immediately after the previous player has moved the tam2.")
+    if !config.it_is_allowed_to_move_tam_immediately_after_tam_has_moved
+        && old_state.tam_has_moved_previously
+    {
+        return Err("By config, it is prohibited for tam2 to move immediately after the previous player has moved the tam2.");
     }
 
     let mut new_field = old_state.f.clone();
@@ -137,7 +139,7 @@ fn apply_tam_move(
     }
 
     new_field.board.insert(second_dest, absolute::Piece::Tam2);
-    return Ok(Probabilistic::Pure(state::HandNotResolved {
+    Ok(Probabilistic::Pure(state::HandNotResolved {
         previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
         previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
         kut2tam2_happened: false,
@@ -147,7 +149,7 @@ fn apply_tam_move(
         ia_owner_s_score: old_state.ia_owner_s_score,
         whose_turn: old_state.whose_turn,
         f: new_field,
-    }));
+    }))
 }
 
 fn apply_nontam_move(
@@ -161,10 +163,7 @@ fn apply_nontam_move(
         previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
         kut2tam2_happened: match step {
             None => false,
-            Some(step) => match old_state.f.board.get(&step) {
-                Some(absolute::Piece::Tam2) => true,
-                _ => false,
-            },
+            Some(step) => matches!(old_state.f.board.get(&step), Some(absolute::Piece::Tam2)),
         },
         rate: old_state.rate,
         i_have_moved_tam_in_this_turn: false,
@@ -226,7 +225,7 @@ fn apply_nontam_move(
             success,
         });
     }
-    return Ok(Probabilistic::Pure(success));
+    Ok(Probabilistic::Pure(success))
 }
 
 pub fn apply_normal_move(
@@ -302,7 +301,7 @@ pub fn apply_normal_move(
                 }
             }
 
-            return Ok(Probabilistic::Pure(state::HandNotResolved {
+            Ok(Probabilistic::Pure(state::HandNotResolved {
                 previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
                 previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
                 kut2tam2_happened: false,
@@ -312,7 +311,7 @@ pub fn apply_normal_move(
                 ia_owner_s_score: old_state.ia_owner_s_score,
                 whose_turn: old_state.whose_turn,
                 f: new_field,
-            }));
+            }))
         }
         message::NormalMove::TamMoveNoStep {
             src,
@@ -324,9 +323,9 @@ pub fn apply_normal_move(
                 first_dest,
                 second_dest,
             }) {
-                return apply_tam_move(old_state, src, first_dest, second_dest, None, config);
+                apply_tam_move(old_state, src, first_dest, second_dest, None, config)
             } else {
-                return Err("The provided TamMoveNoStep was rejected by the crate `cetkaik_yhuap_move_candidates`.");
+                Err("The provided TamMoveNoStep was rejected by the crate `cetkaik_yhuap_move_candidates`.")
             }
         }
         message::NormalMove::TamMoveStepsDuringFormer {
@@ -343,9 +342,9 @@ pub fn apply_normal_move(
                     step,
                 },
             ) {
-                return apply_tam_move(old_state, src, first_dest, second_dest, Some(step), config);
+                apply_tam_move(old_state, src, first_dest, second_dest, Some(step), config)
             } else {
-                return Err("The provided TamMoveStepsDuringFormer was rejected by the crate `cetkaik_yhuap_move_candidates`.");
+                Err("The provided TamMoveStepsDuringFormer was rejected by the crate `cetkaik_yhuap_move_candidates`.")
             }
         }
         message::NormalMove::TamMoveStepsDuringLatter {
@@ -362,9 +361,9 @@ pub fn apply_normal_move(
                     step,
                 },
             ) {
-                return apply_tam_move(old_state, src, first_dest, second_dest, Some(step), config);
+                apply_tam_move(old_state, src, first_dest, second_dest, Some(step), config)
             } else {
-                return Err("The provided TamMoveStepsDuringLatter was rejected by the crate `cetkaik_yhuap_move_candidates`.");
+                Err("The provided TamMoveStepsDuringLatter was rejected by the crate `cetkaik_yhuap_move_candidates`.")
             }
         }
 
@@ -380,9 +379,9 @@ pub fn apply_normal_move(
                     is_water_entry_ciurl: false,
                 },
             ) {
-                return apply_nontam_move(old_state, src, dest, None);
+                apply_nontam_move(old_state, src, dest, None)
             } else {
-                return Err("The provided NonTamMoveSrcDst was rejected by the crate `cetkaik_yhuap_move_candidates`.");
+                Err("The provided NonTamMoveSrcDst was rejected by the crate `cetkaik_yhuap_move_candidates`.")
             }
         }
         message::NormalMove::NonTamMoveSrcStepDstFinite { src, step, dest } => {
@@ -401,9 +400,9 @@ pub fn apply_normal_move(
                     is_water_entry_ciurl: false,
                 },
             ) {
-                return apply_nontam_move(old_state, src, dest, Some(step));
+                apply_nontam_move(old_state, src, dest, Some(step))
             } else {
-                return Err("The provided NonTamMoveSrcStepDstFinite was rejected by the crate `cetkaik_yhuap_move_candidates`.");
+                Err("The provided NonTamMoveSrcStepDstFinite was rejected by the crate `cetkaik_yhuap_move_candidates`.")
             }
         }
     }
@@ -488,10 +487,7 @@ pub fn apply_inf_after_step(
             c: c.clone(),
             ciurl: 4,
         },
-        s5: state::C {
-            c: c.clone(),
-            ciurl: 5,
-        },
+        s5: state::C { c, ciurl: 5 },
     })
 }
 
@@ -538,7 +534,7 @@ fn move_nontam_piece_from_src_to_dest_while_taking_opponent_piece_if_needed(
             }
         }
     }
-    return Ok((new_board, None));
+    Ok((new_board, None))
 }
 
 pub fn apply_after_half_acceptance(
@@ -662,14 +658,14 @@ pub fn apply_after_half_acceptance(
             && !piece.has_prof(cetkaik_core::Profession::Nuak1)
             && absolute::is_water(dest)
         {
-            return Ok(Probabilistic::Water {
+            Ok(Probabilistic::Water {
                 success,
                 failure: nothing_happened,
-            });
+            })
         } else {
             // 入水判定が絶対にないので確率は1
             // succeeds with probability 1
-            return Ok(Probabilistic::Pure(success));
+            Ok(Probabilistic::Pure(success))
         }
     } else {
         // the only possible side effect is that Stepping Tam might
@@ -679,7 +675,7 @@ pub fn apply_after_half_acceptance(
         // パスが発生した以上、駒の動きは実際には発生していないので、
         // 入水判定は発生していない。
 
-        return Ok(Probabilistic::Pure(nothing_happened));
+        Ok(Probabilistic::Pure(nothing_happened))
     }
 }
 
@@ -792,7 +788,7 @@ pub fn resolve(state: state::HandNotResolved, config: Config) -> state::HandReso
         * raw_score;
 
     let new_ia_owner_s_score =
-        0.min(40.max(state.ia_owner_s_score + increment_in_ia_owner_s_score));
+        0.max(40.min(state.ia_owner_s_score + increment_in_ia_owner_s_score));
     let if_taxot = if new_ia_owner_s_score == 40 {
         IfTaxot::VictoriousSide(Some(absolute::Side::IASide))
     } else if new_ia_owner_s_score == 0 {
