@@ -789,6 +789,8 @@ pub struct Config {
     pub failure_to_complete_the_move_means_exempt_from_kut2_tam2: bool,
 }
 
+/// Describes whether an action is forbidden, penalized, or allowed without any penalty.
+/// 行為が禁止されるか、罰則付きであるか、それとも許容されるかを表現する型。
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Hash)]
 pub enum Consequence {
     Allowed,

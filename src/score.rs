@@ -1,9 +1,13 @@
+/// Describes the scores that the two players have. Players each begin with 20 points, and loses when all the points are lost.
+/// ／両プレイヤーが持つ得点を表す型。双方20点スタートであり、点が0点になると敗北。
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Hash)]
 pub struct Scores {
     ia: i32,
     a: i32,
 }
 
+/// Describes who won the game. If `Victor(None)`, the game is a tie.
+/// ／どちらが勝利したのかを表現する型。 `Victor(None)` であれば引き分け。
 pub struct Victor(Option<cetkaik_core::absolute::Side>);
 
 use cetkaik_core::absolute;
