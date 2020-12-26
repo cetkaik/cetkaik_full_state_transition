@@ -150,15 +150,6 @@ fn apply_tam_move(
         } else {
             (0, false)
         };
-
-    // FIXME: WHAT IF THE SCORE REACHES 0 OR 40?
-    let ia_owner_s_score = old_state.ia_owner_s_score
-        + match old_state.whose_turn {
-            absolute::Side::IASide => 1,
-            absolute::Side::ASide => -1,
-        } * (penalty1 + penalty2)
-            * old_state.rate.num();
-
     let mut new_field = old_state.f.clone();
     let expect_tam = new_field
         .board
@@ -191,12 +182,12 @@ fn apply_tam_move(
         // When Tam2 moves, Tam2 is never stepped on (this assumption fails with the two-tam rule, which is not yet supported.)
         // 皇の動きで撃皇が発生することはない（二皇の場合は修正が必要）
         kut2tam2_happened: false,
-
+        tam2tysak2_raw_penalty: penalty1 + penalty2,
         tam2tysak2_will_trigger_taxottymok: is_a_hand1 || is_a_hand2,
         rate: old_state.rate,
         i_have_moved_tam_in_this_turn: true,
         season: old_state.season,
-        ia_owner_s_score,
+        scores: old_state.scores,
         whose_turn: old_state.whose_turn,
         f: new_field,
     }))
@@ -220,11 +211,12 @@ fn apply_nontam_move(
         rate: old_state.rate,
         i_have_moved_tam_in_this_turn: false,
         season: old_state.season,
-        ia_owner_s_score: old_state.ia_owner_s_score,
+        scores: old_state.scores,
         whose_turn: old_state.whose_turn,
         f: old_state.f.clone(),
 
         tam2tysak2_will_trigger_taxottymok: false,
+        tam2tysak2_raw_penalty: 0,
     };
 
     if let Some(st) = step {
@@ -266,11 +258,12 @@ fn apply_nontam_move(
         rate: old_state.rate,
         i_have_moved_tam_in_this_turn: false,
         season: old_state.season,
-        ia_owner_s_score: old_state.ia_owner_s_score,
+        scores: old_state.scores,
         whose_turn: old_state.whose_turn,
         f: new_field,
 
         tam2tysak2_will_trigger_taxottymok: false,
+        tam2tysak2_raw_penalty: 0,
     };
 
     // 入水判定
@@ -373,10 +366,11 @@ pub fn apply_normal_move(
                 rate: old_state.rate,
                 i_have_moved_tam_in_this_turn: false,
                 season: old_state.season,
-                ia_owner_s_score: old_state.ia_owner_s_score,
+                scores: old_state.scores,
                 whose_turn: old_state.whose_turn,
                 f: new_field,
                 tam2tysak2_will_trigger_taxottymok: false,
+                tam2tysak2_raw_penalty: 0,
             }))
         }
         message::NormalMove::TamMoveNoStep {
@@ -529,7 +523,7 @@ pub fn apply_inf_after_step(
         flying_piece_src: msg.src,
         flying_piece_step: msg.step,
         season: old_state.season,
-        ia_owner_s_score: old_state.ia_owner_s_score,
+        scores: old_state.scores,
         rate: old_state.rate,
     };
 
@@ -557,6 +551,10 @@ pub fn apply_inf_after_step(
         s5: state::C { c, ciurl: 5 },
     })
 }
+
+mod score;
+
+pub use score::Scores;
 
 fn move_nontam_piece_from_src_to_dest_while_taking_opponent_piece_if_needed(
     board: &absolute::Board,
@@ -618,10 +616,11 @@ pub fn apply_after_half_acceptance(
         rate: old_state.c.rate,
         i_have_moved_tam_in_this_turn: false,
         season: old_state.c.season,
-        ia_owner_s_score: old_state.c.ia_owner_s_score,
+        scores: old_state.c.scores,
         whose_turn: old_state.c.whose_turn,
         f: old_state.c.f.clone(),
         tam2tysak2_will_trigger_taxottymok: false,
+        tam2tysak2_raw_penalty: 0,
     };
 
     let state::C {
@@ -715,11 +714,12 @@ pub fn apply_after_half_acceptance(
             rate: old_state.c.rate,
             i_have_moved_tam_in_this_turn: false,
             season: old_state.c.season,
-            ia_owner_s_score: old_state.c.ia_owner_s_score,
+            scores: old_state.c.scores,
             whose_turn: old_state.c.whose_turn,
             f: new_field,
 
             tam2tysak2_will_trigger_taxottymok: false,
+            tam2tysak2_raw_penalty: 0,
         };
 
         // Trying to enter the water without any exemptions (neither the piece started from within water, nor the piece is a Vessel).
@@ -750,16 +750,14 @@ pub fn apply_after_half_acceptance(
     }
 }
 
+pub use score::Victor;
+
 /// An auxiliary type that represents whether we should terminate the game or proceed to the next season if the player chose to end the current season.
 /// ／もし終季が選ばれた際、次の季節に進むのか、それともゲームが終了するのかを保持するための補助的な型。
 pub enum IfTaxot {
     NextSeason(Probabilistic<state::A>),
 
-    /// if VictoriousSide(Some(SideA)), SideA has won; if VictoriousSide(Some(SideIA)), SideIA has won.
-    /// if VictoriousSide(None), the game is a draw.
-    /// VictoriousSide(Some(SideA)) なら SideA が勝っており、 VictoriousSide(Some(SideIA)) なら SideIA が勝っている。
-    /// VictoriousSide(None) なら引き分けである。
-    VictoriousSide(Option<absolute::Side>),
+    VictoriousSide(Victor),
 }
 
 /// Describes the minor differences between the numerous rule variants.
@@ -886,64 +884,46 @@ pub fn resolve(state: &state::HandNotResolved, config: Config) -> state::HandRes
         tymoxtaxot_because_of_kut2tam2,
         tymoxtaxot_because_of_newly_acquired,
         state.tam2tysak2_will_trigger_taxottymok,
+        state.tam2tysak2_raw_penalty,
     ) {
         // nothing happened; hand the turn to the next person
         // 役ができていないので、次の人に手番を渡す
         // この際、step_tam_is_a_handがfalseの場合、5点×レートを引くだけ引く。
-        (false, None, false) => {
-            return state::HandResolved::NeitherTymokNorTaxot(state::A {
-                f: state.f.clone(),
-                whose_turn: !state.whose_turn, /* hand the turn to the next person */
-                season: state.season,
-                ia_owner_s_score: state.ia_owner_s_score
-                    + if state.kut2tam2_happened {
-                        state.rate.num()
-                    } else {
-                        0
-                    } * match state.whose_turn {
-                        absolute::Side::IASide => -5,
-                        absolute::Side::ASide => 5,
-                    },
-                rate: state.rate,
-                tam_has_moved_previously: state.i_have_moved_tam_in_this_turn,
-            });
+        (false, None, false, score2) => {
+            match state.scores.edit(score2 - 5, state.whose_turn, state.rate) {
+                Ok(new_scores) => {
+                    return state::HandResolved::NeitherTymokNorTaxot(state::A {
+                        f: state.f.clone(),
+                        whose_turn: !state.whose_turn, /* hand the turn to the next person */
+                        season: state.season,
+                        scores: new_scores,
+                        rate: state.rate,
+                        tam_has_moved_previously: state.i_have_moved_tam_in_this_turn,
+                    });
+                }
+
+                Err(victor) => return state::HandResolved::GameEndsWithoutTymokTaxot(victor),
+            }
         }
 
         // Even when `state.tam2tysak2_will_trigger_taxottymok` is set, the penalty is already subtracted from `ia_owner_s_score`
         // ／`state.tam2tysak2_will_trigger_taxottymok`が `true` であるときも、罰則点はすでに `ia_owner_s_score` に計上してあるので、調整しなくてよい。
-        (false, None, true) => 0,
-        (false, Some(score), _) => score,
-        (true, None, _) => -5,
-        (true, Some(score), _) => score - 5,
+        (false, None, true, score2) => score2,
+        (false, Some(score), _, score2) => score + score2,
+        (true, None, _, score2) => -5 + score2,
+        (true, Some(score), _, score2) => score - 5 + score2,
     };
 
-    let increment_in_ia_owner_s_score = match state.whose_turn {
-        absolute::Side::IASide => 1,
-        absolute::Side::ASide => -1,
-    } * state.rate.num()
-        * raw_score;
-
-    let new_ia_owner_s_score =
-        0.max(40.min(state.ia_owner_s_score + increment_in_ia_owner_s_score));
-    let if_taxot = if new_ia_owner_s_score == 40 {
-        IfTaxot::VictoriousSide(Some(absolute::Side::IASide))
-    } else if new_ia_owner_s_score == 0 {
-        IfTaxot::VictoriousSide(Some(absolute::Side::ASide))
-    } else {
-        state.season.next().map_or(
-            /* All seasons have ended */
-            match new_ia_owner_s_score.cmp(&(40 - new_ia_owner_s_score)) {
-                std::cmp::Ordering::Greater => {
-                    IfTaxot::VictoriousSide(Some(absolute::Side::IASide))
-                }
-                std::cmp::Ordering::Less => IfTaxot::VictoriousSide(Some(absolute::Side::ASide)),
-                std::cmp::Ordering::Equal => IfTaxot::VictoriousSide(None),
-            },
-            /* The next season exists */
-            |next_season| {
-                IfTaxot::NextSeason(beginning_of_season(next_season, new_ia_owner_s_score))
-            },
-        )
+    let if_taxot = match state.scores.edit(raw_score, state.whose_turn, state.rate) {
+        Err(victor) => IfTaxot::VictoriousSide(victor),
+        Ok(new_scores) => {
+            state.season.next().map_or(
+                /* All seasons have ended */
+                IfTaxot::VictoriousSide(new_scores.which_side_is_winning()),
+                /* The next season exists */
+                |next_season| IfTaxot::NextSeason(beginning_of_season(next_season, new_scores)),
+            )
+        }
     };
 
     state::HandResolved::HandExists {
@@ -951,7 +931,7 @@ pub fn resolve(state: &state::HandNotResolved, config: Config) -> state::HandRes
             f: state.f.clone(),
             whose_turn: !state.whose_turn, /* hand the turn to the next person */
             season: state.season,
-            ia_owner_s_score: state.ia_owner_s_score,
+            scores: state.scores,
             rate: state.rate.next(), /* double the stake */
             tam_has_moved_previously: state.i_have_moved_tam_in_this_turn,
         },
@@ -964,13 +944,13 @@ pub fn resolve(state: &state::HandNotResolved, config: Config) -> state::HandRes
 /// ／ゲーム開始、季節は春で所持点は20
 #[must_use]
 pub fn initial_state() -> Probabilistic<state::A> {
-    beginning_of_season(Season::Iei2, 20)
+    beginning_of_season(Season::Iei2, Scores::new())
 }
 
-fn beginning_of_season(season: Season, ia_owner_s_score: i32) -> Probabilistic<state::A> {
+fn beginning_of_season(season: Season, scores: Scores) -> Probabilistic<state::A> {
     let ia_first = state::A {
         whose_turn: absolute::Side::IASide,
-        ia_owner_s_score,
+        scores,
         rate: Rate::X1,
         season,
         tam_has_moved_previously: false,

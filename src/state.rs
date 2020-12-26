@@ -1,11 +1,11 @@
-use super::{absolute, state, IfTaxot, Rate, Season};
+use super::{absolute, state, IfTaxot, Rate, Season, Scores};
 /// Normal state. ／一番普通の状態。
 #[derive(Clone, Debug)]
 pub struct A {
     pub f: absolute::Field,
     pub whose_turn: absolute::Side,
     pub season: Season,
-    pub ia_owner_s_score: i32,
+    pub scores: Scores,
     pub rate: Rate,
     pub tam_has_moved_previously: bool,
 }
@@ -27,7 +27,7 @@ pub struct CWithoutCiurl {
     pub flying_piece_src: absolute::Coord,
     pub flying_piece_step: absolute::Coord,
     pub season: Season,
-    pub ia_owner_s_score: i32,
+    pub scores: Scores,
     pub rate: Rate,
 }
 
@@ -38,12 +38,13 @@ pub struct HandNotResolved {
     pub f: absolute::Field,
     pub whose_turn: absolute::Side,
     pub season: Season,
-    pub ia_owner_s_score: i32,
+    pub scores: Scores,
     pub rate: Rate,
     pub i_have_moved_tam_in_this_turn: bool,
     pub previous_a_side_hop1zuo1: Vec<absolute::NonTam2Piece>,
     pub previous_ia_side_hop1zuo1: Vec<absolute::NonTam2Piece>,
     pub kut2tam2_happened: bool,
+    pub tam2tysak2_raw_penalty: i32,
 
     /// Even when this field is set, the penalty is already subtracted from `ia_owner_s_score`
     /// ／このフィールドが `true` であるときも、罰則点はすでに `ia_owner_s_score` に計上してあるので、調整しなくてよい。
@@ -59,4 +60,7 @@ pub enum HandResolved {
         if_tymok: state::A,
         if_taxot: IfTaxot,
     },
+
+    /// 減点行為が役でないルールでは、役が成立して終季・再行の選択が発生せずに点が尽きることがありうる
+    GameEndsWithoutTymokTaxot(super::score::Victor)
 }
