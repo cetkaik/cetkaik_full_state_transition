@@ -59,7 +59,7 @@ impl state::C {
             .f
             .board
             .get(&self.c.flying_piece_src)
-            .expect("Invalid state::C: at flying_piece_src there is no piece")
+            .expect("Invalid `state::C`: at `flying_piece_src` there is no piece")
     }
 
     #[must_use]
@@ -69,7 +69,7 @@ impl state::C {
             .f
             .board
             .get(&self.c.flying_piece_step)
-            .expect("Invalid state::C: at flying_piece_step there is no piece")
+            .expect("Invalid `state::C`: at `flying_piece_step` there is no piece")
     }
 }
 
@@ -163,6 +163,9 @@ fn apply_tam_move(
     Ok(Probabilistic::Pure(state::HandNotResolved {
         previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
         previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
+
+        // When Tam2 moves, Tam2 is never stepped on (this assumption fails with the two-tam rule, which is not yet supported.)
+        // 皇の動きで撃皇が発生することはない（二皇の場合は修正が必要）
         kut2tam2_happened: false,
         rate: old_state.rate,
         i_have_moved_tam_in_this_turn: true,
@@ -178,14 +181,16 @@ fn apply_nontam_move(
     src: absolute::Coord,
     dest: absolute::Coord,
     step: Option<absolute::Coord>,
+    config: Config,
 ) -> Result<Probabilistic<state::HandNotResolved>, &'static str> {
     let nothing_happened = state::HandNotResolved {
         previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
         previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
-        kut2tam2_happened: match step {
-            None => false,
-            Some(step) => matches!(old_state.f.board.get(&step), Some(absolute::Piece::Tam2)),
-        },
+        kut2tam2_happened: !config.failure_to_complete_the_move_means_exempt_from_kut2_tam2
+            && match step {
+                None => false,
+                Some(step) => matches!(old_state.f.board.get(&step), Some(absolute::Piece::Tam2)),
+            },
         rate: old_state.rate,
         i_have_moved_tam_in_this_turn: false,
         season: old_state.season,
@@ -226,7 +231,10 @@ fn apply_nontam_move(
     let success = state::HandNotResolved {
         previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
         previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
-        kut2tam2_happened: false,
+        kut2tam2_happened: match step {
+            None => false,
+            Some(step) => matches!(old_state.f.board.get(&step), Some(absolute::Piece::Tam2)),
+        },
         rate: old_state.rate,
         i_have_moved_tam_in_this_turn: false,
         season: old_state.season,
@@ -328,6 +336,9 @@ pub fn apply_normal_move(
             Ok(Probabilistic::Pure(state::HandNotResolved {
                 previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
                 previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
+
+                // The stepping of Tam2 never occurs if you are playing from hop1zuo1
+                // 持ち駒から打つ際には撃皇は決して起こらない
                 kut2tam2_happened: false,
                 rate: old_state.rate,
                 i_have_moved_tam_in_this_turn: false,
@@ -403,7 +414,7 @@ pub fn apply_normal_move(
                     is_water_entry_ciurl: false,
                 },
             ) {
-                apply_nontam_move(old_state, src, dest, None)
+                apply_nontam_move(old_state, src, dest, None, config)
             } else {
                 Err("The provided NonTamMoveSrcDst was rejected by the crate `cetkaik_yhuap_move_candidates`.")
             }
@@ -424,7 +435,7 @@ pub fn apply_normal_move(
                     is_water_entry_ciurl: false,
                 },
             ) {
-                apply_nontam_move(old_state, src, dest, Some(step))
+                apply_nontam_move(old_state, src, dest, Some(step), config)
             } else {
                 Err("The provided NonTamMoveSrcStepDstFinite was rejected by the crate `cetkaik_yhuap_move_candidates`.")
             }
@@ -571,7 +582,8 @@ pub fn apply_after_half_acceptance(
     let nothing_happened = state::HandNotResolved {
         previous_a_side_hop1zuo1: old_state.c.f.a_side_hop1zuo1.clone(),
         previous_ia_side_hop1zuo1: old_state.c.f.ia_side_hop1zuo1.clone(),
-        kut2tam2_happened: old_state.piece_at_flying_piece_step().is_tam2(),
+        kut2tam2_happened: !config.failure_to_complete_the_move_means_exempt_from_kut2_tam2
+            && old_state.piece_at_flying_piece_step().is_tam2(),
         rate: old_state.c.rate,
         i_have_moved_tam_in_this_turn: false,
         season: old_state.c.season,
@@ -740,6 +752,23 @@ pub struct Config {
     /// SY 2020/02/18 - 2020/02/19
     /// 「前者は皇無行とかっぽそう。後者が狭義の皇再来なのかもしれん。ただややこしい」
     pub tam_mun_mok_is_allowed: bool,
+
+    /// 入水判定や踏越え判定に失敗したときに、撃皇が免除されるかどうか
+    pub failure_to_complete_the_move_means_exempt_from_kut2_tam2: bool,
+}
+
+impl Config {
+    /// Cerke Online α版での config 設定。
+    #[must_use]
+    pub fn cerke_online_alpha_config() -> Config {
+        Config {
+            step_tam_is_a_hand: false,
+            tam_itself_is_tam_hue: true,
+            it_is_allowed_to_move_tam_immediately_after_tam_has_moved: false,
+            tam_mun_mok_is_allowed: true,
+            failure_to_complete_the_move_means_exempt_from_kut2_tam2: false,
+        }
+    }
 }
 
 /// Sends `HandNotResolved` to `HandResolved`.
