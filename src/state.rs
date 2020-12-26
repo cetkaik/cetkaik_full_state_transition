@@ -44,6 +44,10 @@ pub struct HandNotResolved {
     pub previous_a_side_hop1zuo1: Vec<absolute::NonTam2Piece>,
     pub previous_ia_side_hop1zuo1: Vec<absolute::NonTam2Piece>,
     pub kut2tam2_happened: bool,
+
+    /// Even when this field is set, the penalty is already subtracted from `ia_owner_s_score`
+    /// ／このフィールドが `true` であるときも、罰則点はすでに `ia_owner_s_score` に計上してあるので、調整しなくてよい。
+    pub tam2tysak2_will_trigger_taxottymok: bool,
 }
 
 /// Converting `HandNotResolved` into `HandResolved` with `resolve` tells you whether a new hand was created. If so, the `HandExists` variant is taken; if not, the `NeitherTymokNorTaxot` is taken.

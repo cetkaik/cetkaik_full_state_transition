@@ -126,31 +126,38 @@ fn apply_tam_move(
     step: Option<absolute::Coord>,
     config: Config,
 ) -> Result<Probabilistic<state::HandNotResolved>, &'static str> {
-    let penalty1 = if old_state.tam_has_moved_previously {
-        match config.moving_tam_immediately_after_tam_has_moved
-             {
-                 Consequence::Allowed => 0,
-                 Consequence::Penalized(penalty) => penalty,
-                Consequence::Forbidden => return Err("By config, it is prohibited for tam2 to move immediately after the previous player has moved the tam2.")
-        }
+    let (penalty1, is_a_hand1) = if old_state.tam_has_moved_previously {
+        match config.moving_tam_immediately_after_tam_has_moved {
+                Consequence::Allowed => (0, false),
+                Consequence::Penalized{penalty, is_a_hand} => (penalty, is_a_hand),
+                Consequence::Forbidden => return Err(
+                    "By config, it is prohibited for tam2 to move immediately after the previous player has moved the tam2."
+                )
+            }
     } else {
-        0
+        (0, false)
     };
 
-    let penalty2 =
+    let (penalty2, is_a_hand2) =
         if src == second_dest {
             match config.tam_mun_mok {
                 Consequence::Forbidden => return Err(
                     "By config, it is prohibited for tam2 to start and end at the same position.",
                 ),
-                Consequence::Allowed => 0,
-                Consequence::Penalized(penalty) => penalty,
+                Consequence::Allowed => (0, false),
+                Consequence::Penalized { penalty, is_a_hand } => (penalty, is_a_hand),
             }
         } else {
-            0
+            (0, false)
         };
 
-    let ia_owner_s_score = old_state.ia_owner_s_score + penalty1 + penalty2;
+    // FIXME: WHAT IF THE SCORE REACHES 0 OR 40?
+    let ia_owner_s_score = old_state.ia_owner_s_score
+        + match old_state.whose_turn {
+            absolute::Side::IASide => 1,
+            absolute::Side::ASide => -1,
+        } * (penalty1 + penalty2)
+            * old_state.rate.num();
 
     let mut new_field = old_state.f.clone();
     let expect_tam = new_field
@@ -184,6 +191,8 @@ fn apply_tam_move(
         // When Tam2 moves, Tam2 is never stepped on (this assumption fails with the two-tam rule, which is not yet supported.)
         // 皇の動きで撃皇が発生することはない（二皇の場合は修正が必要）
         kut2tam2_happened: false,
+
+        tam2tysak2_will_trigger_taxottymok: is_a_hand1 || is_a_hand2,
         rate: old_state.rate,
         i_have_moved_tam_in_this_turn: true,
         season: old_state.season,
@@ -214,6 +223,8 @@ fn apply_nontam_move(
         ia_owner_s_score: old_state.ia_owner_s_score,
         whose_turn: old_state.whose_turn,
         f: old_state.f.clone(),
+
+        tam2tysak2_will_trigger_taxottymok: false,
     };
 
     if let Some(st) = step {
@@ -258,6 +269,8 @@ fn apply_nontam_move(
         ia_owner_s_score: old_state.ia_owner_s_score,
         whose_turn: old_state.whose_turn,
         f: new_field,
+
+        tam2tysak2_will_trigger_taxottymok: false,
     };
 
     // 入水判定
@@ -363,6 +376,7 @@ pub fn apply_normal_move(
                 ia_owner_s_score: old_state.ia_owner_s_score,
                 whose_turn: old_state.whose_turn,
                 f: new_field,
+                tam2tysak2_will_trigger_taxottymok: false,
             }))
         }
         message::NormalMove::TamMoveNoStep {
@@ -607,6 +621,7 @@ pub fn apply_after_half_acceptance(
         ia_owner_s_score: old_state.c.ia_owner_s_score,
         whose_turn: old_state.c.whose_turn,
         f: old_state.c.f.clone(),
+        tam2tysak2_will_trigger_taxottymok: false,
     };
 
     let state::C {
@@ -703,6 +718,8 @@ pub fn apply_after_half_acceptance(
             ia_owner_s_score: old_state.c.ia_owner_s_score,
             whose_turn: old_state.c.whose_turn,
             f: new_field,
+
+            tam2tysak2_will_trigger_taxottymok: false,
         };
 
         // Trying to enter the water without any exemptions (neither the piece started from within water, nor the piece is a Vessel).
@@ -777,7 +794,7 @@ pub struct Config {
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Hash)]
 pub enum Consequence {
     Allowed,
-    Penalized(i32),
+    Penalized { penalty: i32, is_a_hand: bool },
     Forbidden,
 }
 
@@ -800,8 +817,14 @@ impl Config {
         Config {
             step_tam_is_a_hand: true,
             tam_itself_is_tam_hue: false,
-            moving_tam_immediately_after_tam_has_moved: Consequence::Penalized(-3),
-            tam_mun_mok: Consequence::Penalized(-3),
+            moving_tam_immediately_after_tam_has_moved: Consequence::Penalized {
+                penalty: -3,
+                is_a_hand: true,
+            },
+            tam_mun_mok: Consequence::Penalized {
+                penalty: -3,
+                is_a_hand: true,
+            },
             failure_to_complete_the_move_means_exempt_from_kut2_tam2: false,
         }
     }
@@ -862,11 +885,12 @@ pub fn resolve(state: &state::HandNotResolved, config: Config) -> state::HandRes
     let raw_score = match (
         tymoxtaxot_because_of_kut2tam2,
         tymoxtaxot_because_of_newly_acquired,
+        state.tam2tysak2_will_trigger_taxottymok,
     ) {
         // nothing happened; hand the turn to the next person
         // 役ができていないので、次の人に手番を渡す
         // この際、step_tam_is_a_handがfalseの場合、5点×レートを引くだけ引く。
-        (false, None) => {
+        (false, None, false) => {
             return state::HandResolved::NeitherTymokNorTaxot(state::A {
                 f: state.f.clone(),
                 whose_turn: !state.whose_turn, /* hand the turn to the next person */
@@ -885,9 +909,12 @@ pub fn resolve(state: &state::HandNotResolved, config: Config) -> state::HandRes
             });
         }
 
-        (false, Some(score)) => score,
-        (true, None) => -5,
-        (true, Some(score)) => score - 5,
+        // Even when `state.tam2tysak2_will_trigger_taxottymok` is set, the penalty is already subtracted from `ia_owner_s_score`
+        // ／`state.tam2tysak2_will_trigger_taxottymok`が `true` であるときも、罰則点はすでに `ia_owner_s_score` に計上してあるので、調整しなくてよい。
+        (false, None, true) => 0,
+        (false, Some(score), _) => score,
+        (true, None, _) => -5,
+        (true, Some(score), _) => score - 5,
     };
 
     let increment_in_ia_owner_s_score = match state.whose_turn {
