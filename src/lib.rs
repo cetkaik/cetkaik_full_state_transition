@@ -287,7 +287,7 @@ pub fn apply_normal_move(
     config: Config,
 ) -> Result<Probabilistic<state::HandNotResolved>, &'static str> {
     use cetkaik_yhuap_move_candidates::{
-        from_hand_candidates, not_from_hand_candidates_, to_relative_field, PureGameState,
+        from_hop1zuo1_candidates, not_from_hop1zuo1_candidates_, to_relative_field, PureGameState,
     };
 
     // must set it so that old_state.whose_turn points downward
@@ -296,14 +296,14 @@ pub fn apply_normal_move(
         absolute::Side::ASide => cetkaik_core::perspective::Perspective::IaIsDownAndPointsUpward,
     };
 
-    let hop1zuo1_candidates = from_hand_candidates(&PureGameState {
+    let hop1zuo1_candidates = from_hop1zuo1_candidates(&PureGameState {
         perspective,
         opponent_has_just_moved_tam: old_state.tam_has_moved_previously,
         tam_itself_is_tam_hue: config.tam_itself_is_tam_hue,
         f: to_relative_field(old_state.f.clone(), perspective),
     });
 
-    let candidates = not_from_hand_candidates_(
+    let candidates = not_from_hop1zuo1_candidates_(
         &cetkaik_yhuap_move_candidates::Config {
             allow_kut2tam2: true,
         },
@@ -346,7 +346,7 @@ pub fn apply_normal_move(
             // したがって、 return Err ではなく unreachable としてある。
             {
                 if !hop1zuo1_candidates.contains(
-                    &cetkaik_yhuap_move_candidates::PureMove::NonTamMoveFromHand {
+                    &cetkaik_yhuap_move_candidates::PureMove::NonTamMoveFromHopZuo {
                         color,
                         prof,
                         dest,
@@ -487,7 +487,7 @@ pub fn apply_inf_after_step(
         absolute::Side::ASide => cetkaik_core::perspective::Perspective::IaIsDownAndPointsUpward,
     };
 
-    let candidates = cetkaik_yhuap_move_candidates::not_from_hand_candidates_(
+    let candidates = cetkaik_yhuap_move_candidates::not_from_hop1zuo1_candidates_(
         &cetkaik_yhuap_move_candidates::Config {
             allow_kut2tam2: true,
         },
@@ -642,7 +642,7 @@ pub fn apply_after_half_acceptance(
                     cetkaik_core::perspective::Perspective::IaIsDownAndPointsUpward
                 }
             };
-            let candidates = cetkaik_yhuap_move_candidates::not_from_hand_candidates_(
+            let candidates = cetkaik_yhuap_move_candidates::not_from_hop1zuo1_candidates_(
                 &cetkaik_yhuap_move_candidates::Config {
                     allow_kut2tam2: true,
                 },

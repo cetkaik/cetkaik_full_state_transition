@@ -8,19 +8,23 @@ pub struct Victor(Option<cetkaik_core::absolute::Side>);
 
 use cetkaik_core::absolute;
 impl Scores {
+    #[must_use]
     pub fn new() -> Scores {
         Scores { ia: 20, a: 20 }
     }
 
-    pub fn ia(&self) -> i32 {
+    #[must_use]
+    pub fn ia(self) -> i32 {
         self.ia
     }
-    pub fn a(&self) -> i32 {
+
+    #[must_use]
+    pub fn a(self) -> i32 {
         self.a
     }
 
     pub fn edit(
-        &self,
+        self,
         raw_score: i32,
         whose_turn: cetkaik_core::absolute::Side,
         rate: super::Rate,
@@ -44,6 +48,7 @@ impl Scores {
         }
     }
 
+    #[must_use]
     pub fn which_side_is_winning(self) -> Victor {
         match self.ia.cmp(&(40 - self.ia)) {
             std::cmp::Ordering::Greater => {
