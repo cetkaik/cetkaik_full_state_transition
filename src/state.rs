@@ -1,4 +1,4 @@
-use super::{absolute, state, IfTaxot, Rate, Season, Scores};
+use super::{absolute, state, IfTaxot, Rate, Scores, Season};
 /// Normal state. ／一番普通の状態。
 #[derive(Clone, Debug)]
 pub struct A {
@@ -62,5 +62,5 @@ pub enum HandResolved {
     },
 
     /// 減点行為が役でないルールでは、役が成立して終季・再行の選択が発生せずに点が尽きることがありうる
-    GameEndsWithoutTymokTaxot(super::score::Victor)
+    GameEndsWithoutTymokTaxot(super::score::Victor),
 }

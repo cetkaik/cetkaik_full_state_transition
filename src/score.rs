@@ -55,10 +55,8 @@ impl Scores {
     #[must_use]
     pub fn which_side_is_winning(self) -> Victor {
         match self.ia.cmp(&(40 - self.ia)) {
-            std::cmp::Ordering::Greater => {
-                Victor(Some(absolute::Side::IASide))
-            }
-            std::cmp::Ordering::Less =>Victor(Some(absolute::Side::ASide)),
+            std::cmp::Ordering::Greater => Victor(Some(absolute::Side::IASide)),
+            std::cmp::Ordering::Less => Victor(Some(absolute::Side::ASide)),
             std::cmp::Ordering::Equal => Victor(None),
         }
     }
