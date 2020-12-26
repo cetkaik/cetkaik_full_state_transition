@@ -880,39 +880,45 @@ pub fn resolve(state: &state::HandNotResolved, config: Config) -> state::HandRes
         }
     };
 
-    let raw_score = match (
-        tymoxtaxot_because_of_kut2tam2,
-        tymoxtaxot_because_of_newly_acquired,
-        state.tam2tysak2_will_trigger_taxottymok,
-        state.tam2tysak2_raw_penalty,
-    ) {
+    if !tymoxtaxot_because_of_kut2tam2
+        && tymoxtaxot_because_of_newly_acquired.is_none()
+        && !state.tam2tysak2_will_trigger_taxottymok
+    {
         // nothing happened; hand the turn to the next person
         // 役ができていないので、次の人に手番を渡す
-        // この際、step_tam_is_a_handがfalseの場合、5点×レートを引くだけ引く。
-        (false, None, false, score2) => {
-            match state.scores.edit(score2 - 5, state.whose_turn, state.rate) {
-                Ok(new_scores) => {
-                    return state::HandResolved::NeitherTymokNorTaxot(state::A {
-                        f: state.f.clone(),
-                        whose_turn: !state.whose_turn, /* hand the turn to the next person */
-                        season: state.season,
-                        scores: new_scores,
-                        rate: state.rate,
-                        tam_has_moved_previously: state.i_have_moved_tam_in_this_turn,
-                    });
-                }
-
-                Err(victor) => return state::HandResolved::GameEndsWithoutTymokTaxot(victor),
+        // 減点分×レートは引く。
+        match state.scores.edit(
+            -5 + state.tam2tysak2_raw_penalty,
+            state.whose_turn,
+            state.rate,
+        ) {
+            Ok(new_scores) => {
+                return state::HandResolved::NeitherTymokNorTaxot(state::A {
+                    f: state.f.clone(),
+                    whose_turn: !state.whose_turn, /* hand the turn to the next person */
+                    season: state.season,
+                    scores: new_scores,
+                    rate: state.rate,
+                    tam_has_moved_previously: state.i_have_moved_tam_in_this_turn,
+                });
             }
-        }
 
-        // Even when `state.tam2tysak2_will_trigger_taxottymok` is set, the penalty is already subtracted from `ia_owner_s_score`
-        // ／`state.tam2tysak2_will_trigger_taxottymok`が `true` であるときも、罰則点はすでに `ia_owner_s_score` に計上してあるので、調整しなくてよい。
-        (false, None, true, score2) => score2,
-        (false, Some(score), _, score2) => score + score2,
-        (true, None, _, score2) => -5 + score2,
-        (true, Some(score), _, score2) => score - 5 + score2,
-    };
+            Err(victor) => return state::HandResolved::GameEndsWithoutTymokTaxot(victor),
+        }
+    }
+
+    // In all the other cases, a hand exists due to some reason; hence tymok/taxot
+    // それ以外の場合、なんらかの理由で役が存在するので、終季・再行を行わねばならない
+    let raw_score = state.tam2tysak2_raw_penalty
+        + if tymoxtaxot_because_of_kut2tam2 {
+            -5
+        } else {
+            0
+        }
+        + match tymoxtaxot_because_of_newly_acquired {
+            None => 0,
+            Some(score) => score,
+        };
 
     let if_taxot = match state.scores.edit(raw_score, state.whose_turn, state.rate) {
         Err(victor) => IfTaxot::VictoriousSide(victor),
