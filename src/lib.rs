@@ -126,15 +126,31 @@ fn apply_tam_move(
     step: Option<absolute::Coord>,
     config: Config,
 ) -> Result<Probabilistic<state::HandNotResolved>, &'static str> {
-    if !config.it_is_allowed_to_move_tam_immediately_after_tam_has_moved
-        && old_state.tam_has_moved_previously
-    {
-        return Err("By config, it is prohibited for tam2 to move immediately after the previous player has moved the tam2.");
-    }
+    let penalty1 = if old_state.tam_has_moved_previously {
+        match config.moving_tam_immediately_after_tam_has_moved
+             {
+                 Consequence::Allowed => 0,
+                 Consequence::Penalized(penalty) => penalty,
+                Consequence::Forbidden => return Err("By config, it is prohibited for tam2 to move immediately after the previous player has moved the tam2.")
+        }
+    } else {
+        0
+    };
 
-    if !config.tam_mun_mok_is_allowed && src == second_dest {
-        return Err("By config, it is prohibited for tam2 to start and end at the same position.");
-    }
+    let penalty2 =
+        if src == second_dest {
+            match config.tam_mun_mok {
+                Consequence::Forbidden => return Err(
+                    "By config, it is prohibited for tam2 to start and end at the same position.",
+                ),
+                Consequence::Allowed => 0,
+                Consequence::Penalized(penalty) => penalty,
+            }
+        } else {
+            0
+        };
+
+    let ia_owner_s_score = old_state.ia_owner_s_score + penalty1 + penalty2;
 
     let mut new_field = old_state.f.clone();
     let expect_tam = new_field
@@ -160,6 +176,7 @@ fn apply_tam_move(
     }
 
     new_field.board.insert(second_dest, absolute::Piece::Tam2);
+
     Ok(Probabilistic::Pure(state::HandNotResolved {
         previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
         previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
@@ -170,7 +187,7 @@ fn apply_tam_move(
         rate: old_state.rate,
         i_have_moved_tam_in_this_turn: true,
         season: old_state.season,
-        ia_owner_s_score: old_state.ia_owner_s_score,
+        ia_owner_s_score,
         whose_turn: old_state.whose_turn,
         f: new_field,
     }))
@@ -745,27 +762,46 @@ pub struct Config {
     /// 「@SY 皇をもとの位置に戻す皇再来と、相手が動かした後の皇動かしによる皇再来を言い分けたいときってどうするんだろう（cerke_onlineは後者のみを禁じており、前者に関しては無罰則）」
     /// SY 2020/02/18 - 2020/02/19
     /// 「前者は皇無行とかっぽそう。後者が狭義の皇再来なのかもしれん。ただややこしい」
-    pub it_is_allowed_to_move_tam_immediately_after_tam_has_moved: bool,
+    pub moving_tam_immediately_after_tam_has_moved: Consequence,
 
     /// hsjoihs 2020/02/18
     /// 「@SY 皇をもとの位置に戻す皇再来と、相手が動かした後の皇動かしによる皇再来を言い分けたいときってどうするんだろう（cerke_onlineは後者のみを禁じており、前者に関しては無罰則）」
     /// SY 2020/02/18 - 2020/02/19
     /// 「前者は皇無行とかっぽそう。後者が狭義の皇再来なのかもしれん。ただややこしい」
-    pub tam_mun_mok_is_allowed: bool,
+    pub tam_mun_mok: Consequence,
 
     /// 入水判定や踏越え判定に失敗したときに、撃皇が免除されるかどうか
     pub failure_to_complete_the_move_means_exempt_from_kut2_tam2: bool,
 }
 
+#[derive(Clone, Debug, Copy, PartialEq, Eq, Hash)]
+pub enum Consequence {
+    Allowed,
+    Penalized(i32),
+    Forbidden,
+}
+
 impl Config {
     /// Cerke Online α版での config 設定。
     #[must_use]
-    pub fn cerke_online_alpha_config() -> Config {
+    pub fn cerke_online_alpha() -> Config {
         Config {
             step_tam_is_a_hand: false,
             tam_itself_is_tam_hue: true,
-            it_is_allowed_to_move_tam_immediately_after_tam_has_moved: false,
-            tam_mun_mok_is_allowed: true,
+            moving_tam_immediately_after_tam_has_moved: Consequence::Forbidden,
+            tam_mun_mok: Consequence::Allowed,
+            failure_to_complete_the_move_means_exempt_from_kut2_tam2: false,
+        }
+    }
+
+    /// 厳密官定での config 設定。
+    #[must_use]
+    pub fn strict_y1_huap1() -> Config {
+        Config {
+            step_tam_is_a_hand: true,
+            tam_itself_is_tam_hue: false,
+            moving_tam_immediately_after_tam_has_moved: Consequence::Penalized(-3),
+            tam_mun_mok: Consequence::Penalized(-3),
             failure_to_complete_the_move_means_exempt_from_kut2_tam2: false,
         }
     }
