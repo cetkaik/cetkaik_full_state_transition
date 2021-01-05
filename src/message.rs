@@ -58,6 +58,44 @@ pub enum NormalMove {
 }
 
 pub mod binary {
+    #[test]
+    fn it_works() {
+        let mut hit = 0;
+        let mut miss = 0;
+        for _ in 0..=0xf_ffff_u32 {
+            let i = fastrand::u32(..);
+            match (
+                InfAfterStep::from_binary(i),
+                NormalMove::from_binary(i),
+                AfterHalfAcceptance::from_binary(i),
+            ) {
+                (Err(_), Err(_), Err(_)) => {
+                    miss += 1;
+                }
+                (Err(_), Err(_), Ok(after)) => {
+                    hit += 1;
+                    assert_eq!(after.to_binary(), i)
+                }
+                (Err(_), Ok(normal), Err(_)) => {
+                    hit += 1;
+                    assert_eq!(normal.to_binary(), i)
+                }
+                (Ok(inf), Err(_), Err(_)) => {
+                    hit += 1;
+                    assert_eq!(inf.to_binary(), i)
+                }
+                _ => panic!("Ambiguous mapping detected!!!!!"),
+            }
+        }
+        #[allow(clippy::cast_lossless)]
+        println!(
+            "hit: {}, miss: {}, hit ratio: {}",
+            hit,
+            miss,
+            f64::from(hit) / (f64::from(hit) + f64::from(miss))
+        );
+    }
+
     use cetkaik_core::Profession;
     fn prof_to_bin(p: Profession) -> i8 {
         match p {
@@ -258,6 +296,13 @@ pub mod binary {
                     1 => Huok2,
                     _ => return Err(()),
                 };
+
+                let zero = (v & (0b1111_1111_1111 << 9)) >> 9;
+
+                if zero != 0 {
+                    return Err(());
+                }
+
                 let dest: u8 = ((v & (127 << 21)) >> 21).try_into().unwrap();
                 let dest = from_7bit_(dest)?.ok_or(())?;
                 Ok(NormalMove::NonTamMoveFromHand { color, prof, dest })
@@ -352,7 +397,7 @@ pub mod binary {
     }
 
     fn from_7bit(id: u8) -> Result<absolute::Coord, ()> {
-        if id > 81 {
+        if id >= 81 {
             return Err(());
         }
 
@@ -373,10 +418,11 @@ pub mod binary {
     /// * bit 14-20: `first_dest`
     /// * bit 21-27: `second_dest` / `dest` / `planned_direction`
     ///
-    /// If `tag` is zero, then the encoded value is `NormalMove::NonTamMoveFromHand`;
-    /// * bit 21-27: `dest`
+    /// If `tag` is zero, then the encoded value is `NormalMove::NonTamMoveFromHand`;   
     /// * bit 0-7: `prof`
     /// * bit 8: `color` (`0` if red; `1` if black)
+    /// * bit 9-20: zero bits
+    /// * bit 21-27: `dest`
     pub trait Binary
     where
         Self: std::marker::Sized,
