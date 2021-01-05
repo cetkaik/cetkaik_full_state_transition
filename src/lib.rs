@@ -1,5 +1,9 @@
 #![warn(clippy::pedantic)]
 #![allow(clippy::too_many_lines, clippy::missing_errors_doc)]
+
+#[macro_use]
+extern crate enum_primitive;
+
 /// Represents the season. Currently, only four-season games are supported.
 /// ／季節を表現する。今のところ4季制のことしか考えていない。
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Hash)]
