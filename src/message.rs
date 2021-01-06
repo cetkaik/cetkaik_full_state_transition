@@ -112,7 +112,7 @@ pub mod binary {
         }
     }
 
-    fn bin_to_prof(a: i8) -> Result<Profession, ()> {
+    fn bin_to_prof(a: i8) -> Result<Profession, &'static str> {
         match a {
             -1 => Ok(Profession::Nuak1),
             1 => Ok(Profession::Kauk2),
@@ -124,7 +124,7 @@ pub mod binary {
             7 => Ok(Profession::Tuk2),
             8 => Ok(Profession::Uai1),
             9 => Ok(Profession::Io),
-            _ => Err(()),
+            _ => Err("Invalid profession"),
         }
     }
 
@@ -168,7 +168,7 @@ pub mod binary {
             }
             .to_binary()
         }
-        fn from_binary(a: u32) -> Result<Self, ()> {
+        fn from_binary(a: u32) -> Result<Self, &'static str> {
             match Bag::from_binary(a)? {
                 Bag {
                     src: Some(src),
@@ -181,7 +181,7 @@ pub mod binary {
                     step,
                     planned_direction,
                 }),
-                _ => Err(()),
+                _ => Err("cannot interpret the input as an InfAfterStep"),
             }
         }
     }
@@ -197,7 +197,7 @@ pub mod binary {
             }
             .to_binary()
         }
-        fn from_binary(a: u32) -> Result<Self, ()> {
+        fn from_binary(a: u32) -> Result<Self, &'static str> {
             match Bag::from_binary(a)? {
                 Bag {
                     src: None,
@@ -206,7 +206,7 @@ pub mod binary {
                     second_dest: dest,
                     tag: Tag::AfterHalfAcceptance,
                 } => Ok(AfterHalfAcceptance { dest }),
-                _ => Err(()),
+                _ => Err("cannot interpret the input as AfterHalfAcceptance"),
             }
         }
     }
@@ -279,7 +279,7 @@ pub mod binary {
             }
             .to_binary()
         }
-        fn from_binary(v: u32) -> Result<Self, ()> {
+        fn from_binary(v: u32) -> Result<Self, &'static str> {
             use std::convert::TryInto;
             let tag: u8 = ((v & (15 << 28)) >> 28).try_into().unwrap();
             if tag == 0
@@ -294,17 +294,17 @@ pub mod binary {
                 let color = match color {
                     0 => Kok1,
                     1 => Huok2,
-                    _ => return Err(()),
+                    _ => return Err("Invalid color"),
                 };
 
                 let zero = (v & (0b1111_1111_1111 << 9)) >> 9;
 
                 if zero != 0 {
-                    return Err(());
+                    return Err("Expected zero bits in NormalMove::NonTamMoveFromHand");
                 }
 
                 let dest: u8 = ((v & (127 << 21)) >> 21).try_into().unwrap();
-                let dest = from_7bit_(dest)?.ok_or(())?;
+                let dest = from_7bit_(dest)?.ok_or("Invalid destination")?;
                 Ok(NormalMove::NonTamMoveFromHand { color, prof, dest })
             } else {
                 Ok(match Bag::from_binary(v)? {
@@ -359,7 +359,7 @@ pub mod binary {
                         second_dest: Some(dest),
                         tag: Tag::NonTamMoveSrcStepDstFinite,
                     } => NormalMove::NonTamMoveSrcStepDstFinite { src, step, dest },
-                    _ => return Err(()),
+                    _ => return Err("Cannot interpret the input as a NormalMove"),
                 })
             }
         }
@@ -392,13 +392,13 @@ pub mod binary {
         (row * 9 + col).try_into().unwrap()
     }
 
-    fn from_7bit_(a: u8) -> Result<Option<absolute::Coord>, ()> {
+    fn from_7bit_(a: u8) -> Result<Option<absolute::Coord>, &'static str> {
         Ok(if a == 127 { None } else { Some(from_7bit(a)?) })
     }
 
-    fn from_7bit(id: u8) -> Result<absolute::Coord, ()> {
+    fn from_7bit(id: u8) -> Result<absolute::Coord, &'static str> {
         if id >= 81 {
-            return Err(());
+            return Err("Invalid index of a square");
         }
 
         let row = id / 9;
@@ -428,7 +428,7 @@ pub mod binary {
         Self: std::marker::Sized,
     {
         fn to_binary(&self) -> u32;
-        fn from_binary(b: u32) -> Result<Self, ()>;
+        fn from_binary(b: u32) -> Result<Self, &'static str>;
     }
 
     impl Binary for Bag {
@@ -445,7 +445,7 @@ pub mod binary {
             src | (step << 7) | (first_dest << 14) | (second_dest << 21) | (tag << 28)
         }
 
-        fn from_binary(v: u32) -> Result<Self, ()> {
+        fn from_binary(v: u32) -> Result<Self, &'static str> {
             use std::convert::TryInto;
             let src: u8 = (v & 127).try_into().unwrap();
             let step: u8 = ((v & (127 << 7)) >> 7).try_into().unwrap();
@@ -463,7 +463,7 @@ pub mod binary {
                 step,
                 first_dest,
                 second_dest,
-                tag: Tag::from_u8(tag).ok_or(())?,
+                tag: Tag::from_u8(tag).ok_or("invalid tag")?,
             })
         }
     }
