@@ -969,7 +969,11 @@ fn beginning_of_season(season: Season, scores: Scores) -> Probabilistic<state::A
             board: cetkaik_core::absolute::yhuap_initial_board(),
         },
     };
-    let mut a_first = ia_first.clone();
-    a_first.whose_turn = absolute::Side::ASide;
-    Probabilistic::WhoGoesFirst { ia_first, a_first }
+    Probabilistic::WhoGoesFirst {
+        a_first: state::A {
+            whose_turn: absolute::Side::ASide,
+            ..ia_first.clone()
+        },
+        ia_first,
+    }
 }
