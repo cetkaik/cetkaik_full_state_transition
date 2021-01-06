@@ -921,10 +921,7 @@ pub fn resolve(state: &state::HandNotResolved, config: Config) -> state::HandRes
         } else {
             0
         }
-        + match tymoxtaxot_because_of_newly_acquired {
-            None => 0,
-            Some(score) => score,
-        };
+        + tymoxtaxot_because_of_newly_acquired.unwrap_or(0);
 
     let if_taxot = match state.scores.edit(raw_score, state.whose_turn, state.rate) {
         Err(victor) => IfTaxot::VictoriousSide(victor),

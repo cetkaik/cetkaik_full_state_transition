@@ -11,6 +11,13 @@ pub struct Scores {
 pub struct Victor(Option<cetkaik_core::absolute::Side>);
 
 use cetkaik_core::absolute;
+
+impl Default for Scores {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Scores {
     #[must_use]
     pub fn new() -> Scores {
