@@ -61,7 +61,32 @@ impl<T: Clone> Into<Prob<(T, Option<usize>)>> for Probabilistic<T> {
     }
 }
 
-/// Describes the general probability density.
-/// ／一般の確率分布。
+/// Describes the general probability density. Note that this implementation assumes that the sum is exactly 1.
+/// ／一般の確率分布。f64の和が厳密に1になることを前提としている。
 #[readonly::make]
 pub struct Prob<T>(pub Vec<(T, f64)>);
+
+impl<T> Prob<T> {
+    #[must_use]
+    /// Expects a float within the range of 0 up to but not including 1.
+    pub fn choose_by_uniform_random_variable(self, rand: f64) -> T {
+        if !(0.0..1.0).contains(&rand) {
+            panic!("Expects a float within the range of 0 up to but not including 1")
+        }
+        let mut threshold = 0.0;
+        for (t, prob) in self.0 {
+            if (threshold..(threshold + prob)).contains(&rand) {
+                return t;
+            }
+            threshold += prob;
+        }
+        panic!("Something went wrong in `choose_by_uniform_random_variable`")
+    }
+
+    #[must_use]
+    pub fn choose(self) -> T {
+        use rand::Rng;
+        let mut rng = rand::thread_rng();
+        self.choose_by_uniform_random_variable(rng.gen())
+    }
+}
