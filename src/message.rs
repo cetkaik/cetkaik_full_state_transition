@@ -60,10 +60,12 @@ pub enum NormalMove {
 pub mod binary {
     #[test]
     fn it_works() {
+        use rand::Rng;
+        let mut rng = rand::thread_rng();
         let mut hit = 0;
         let mut miss = 0;
         for _ in 0..=0xf_ffff_u32 {
-            let i = fastrand::u32(..);
+            let i = rng.gen();
             match (
                 InfAfterStep::from_binary(i),
                 NormalMove::from_binary(i),
