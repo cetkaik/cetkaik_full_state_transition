@@ -1,5 +1,6 @@
 /// Describes the probability density due to the sticks cast.
 /// ／投げ棒に由来する確率分布。
+#[derive(Debug, Clone)]
 pub enum Probabilistic<T> {
     Pure(T),
     Water {

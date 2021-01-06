@@ -4,9 +4,11 @@
 #[macro_use]
 extern crate enum_primitive;
 
+use serde::{Deserialize, Serialize};
+
 /// Represents the season. Currently, only four-season games are supported.
 /// ／季節を表現する。今のところ4季制のことしか考えていない。
-#[derive(Clone, Debug, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Season {
     ///春, Spring
     Iei2,
@@ -82,7 +84,7 @@ impl state::C {
 /// Not that it will ever be of use in any real situation.
 /// ／3点役2つと-5点役一つを同時成立させることにより1点の得点を得ることが可能である。したがって、二人の得点の総和が40点である以上、32倍レートと64倍レートを区別する必要がある（32点を獲得することは必ずしも勝利を意味しないが、64点を獲得することは必ず勝利を意味するので）。
 ///
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub enum Rate {
     X1,
     X2,
@@ -758,6 +760,7 @@ pub use score::Victor;
 
 /// An auxiliary type that represents whether we should terminate the game or proceed to the next season if the player chose to end the current season.
 /// ／もし終季が選ばれた際、次の季節に進むのか、それともゲームが終了するのかを保持するための補助的な型。
+#[derive(Clone, Debug)]
 pub enum IfTaxot {
     NextSeason(Probabilistic<state::A>),
 

@@ -1,6 +1,8 @@
 use super::{absolute, state, IfTaxot, Rate, Scores, Season};
+use serde::{Deserialize, Serialize};
+
 /// Normal state. ／一番普通の状態。
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct A {
     pub f: absolute::Field,
     pub whose_turn: absolute::Side,
@@ -12,7 +14,7 @@ pub struct A {
 
 /// This is the state after the user has stepped over a piece and has cast the sticks so that the user can play to make an infinite movement from there. Seeing the sticks, the user is supposed to decide the final location and send it (`AfterHalfAcceptance`) to the server.
 /// ／踏越え後の無限移動をユーザーが行い、それに対して投げ棒で判定した後の状態。投げ棒を見て、ユーザーは最終的な移動場所をCに対しこれから送りつける。
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct C {
     pub c: CWithoutCiurl,
     pub ciurl: i32,
@@ -20,7 +22,7 @@ pub struct C {
 
 /// Same as `C`, except that the ciurl is not mentioned.
 /// ／`C` から投げ棒の値を除いたやつ。
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CWithoutCiurl {
     pub f: absolute::Field,
     pub whose_turn: absolute::Side,
@@ -33,7 +35,7 @@ pub struct CWithoutCiurl {
 
 /// The water entry cast (if any) is now over, and thus the piece movement is now fully completed. However, I still haven't resolved whether a hand exists. If so, I must ask the user to choose whether to end the season or not.
 /// ／入水判定も終わり、駒を完全に動かし終わった。しかしながら、「役が存在していて再行・終季をユーザーに訊く」を発生させるか否かをまだ解決していない。そんな状態。
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct HandNotResolved {
     pub f: absolute::Field,
     pub whose_turn: absolute::Side,
@@ -54,6 +56,7 @@ pub struct HandNotResolved {
 /// Converting `HandNotResolved` into `HandResolved` with `resolve` tells you whether a new hand was created. If so, the `HandExists` variant is taken; if not, the `NeitherTymokNorTaxot` is taken.
 /// ／`HandNotResolved` を `resolve` でこの型に変換することによって、『役は発生しなかったぞ』であるのか、それとも『役は発生しており、したがって【再行ならこの `A` に至る】【終季ならこの `Probabilistic<state::A>` に至る（どちらが先手になるかは鯖のみぞ知るので `Probabilistic`）】』のどちらであるかを知ることができる。撃皇が役を構成するかどうかによってここの処理は変わってくるので、
 /// `resolve` は `Config` を要求する。
+#[derive(Clone, Debug)]
 pub enum HandResolved {
     NeitherTymokNorTaxot(state::A),
     HandExists {
