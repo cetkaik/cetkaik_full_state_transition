@@ -431,6 +431,19 @@ pub mod binary {
     {
         fn to_binary(&self) -> u32;
         fn from_binary(b: u32) -> Result<Self, &'static str>;
+
+        #[must_use]
+        fn random_choice() -> Self {
+            use rand::Rng;
+            let mut rng = rand::thread_rng();
+            loop {
+                let i = rng.gen();
+                match Self::from_binary(i) {
+                    Ok(a) => return a,
+                    Err(_) => continue,
+                }
+            }
+        }
     }
 
     impl Binary for Bag {
