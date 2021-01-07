@@ -1,4 +1,4 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 /// Describes the scores that the two players have. Players each begin with 20 points, and loses when all the points are lost.
 /// ／両プレイヤーが持つ得点を表す型。双方20点スタートであり、点が0点になると敗北。
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

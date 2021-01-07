@@ -287,7 +287,13 @@ fn apply_nontam_move(
 }
 
 #[must_use]
-pub fn get_candidates(old_state: &state::A, config: Config) -> (Vec<cetkaik_yhuap_move_candidates::PureMove>, Vec<cetkaik_yhuap_move_candidates::PureMove>) {
+pub fn get_candidates(
+    old_state: &state::A,
+    config: Config,
+) -> (
+    Vec<cetkaik_yhuap_move_candidates::PureMove>,
+    Vec<cetkaik_yhuap_move_candidates::PureMove>,
+) {
     use cetkaik_yhuap_move_candidates::{
         from_hop1zuo1_candidates, not_from_hop1zuo1_candidates_, to_relative_field, PureGameState,
     };
@@ -322,11 +328,15 @@ pub fn get_candidates(old_state: &state::A, config: Config) -> (Vec<cetkaik_yhua
 
 /// When completely stuck, call this function to end the game.
 /// ／完全に手詰まりのときは、この関数を呼び出すことで即時決着がつく。
-pub fn no_move_possible_at_all(old_state: &state::A,
-    config: Config,) -> Result<state::HandResolved, &'static str> {
+pub fn no_move_possible_at_all(
+    old_state: &state::A,
+    config: Config,
+) -> Result<state::HandResolved, &'static str> {
     let (hop1zuo1_candidates, candidates) = get_candidates(&old_state, config);
     if hop1zuo1_candidates.is_empty() && candidates.is_empty() {
-        Ok(state::HandResolved::GameEndsWithoutTymokTaxot(old_state.scores.which_side_is_winning()))
+        Ok(state::HandResolved::GameEndsWithoutTymokTaxot(
+            old_state.scores.which_side_is_winning(),
+        ))
     } else {
         Err("At least one valid move exists")
     }
