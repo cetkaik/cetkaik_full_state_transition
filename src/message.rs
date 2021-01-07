@@ -1,5 +1,6 @@
 use super::absolute;
 
+#[derive(Eq, PartialEq, Clone, Debug)]
 pub enum PureMove {
     InfAfterStep(InfAfterStep),
     NormalMove(NormalMove),

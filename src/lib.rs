@@ -290,10 +290,7 @@ fn apply_nontam_move(
 pub fn get_candidates(
     old_state: &state::A,
     config: Config,
-) -> (
-    Vec<cetkaik_yhuap_move_candidates::PureMove>,
-    Vec<cetkaik_yhuap_move_candidates::PureMove>,
-) {
+) -> (Vec<message::PureMove>, Vec<message::PureMove>) {
     use cetkaik_yhuap_move_candidates::{
         from_hop1zuo1_candidates, not_from_hop1zuo1_candidates_, to_relative_field, PureGameState,
     };
@@ -323,7 +320,16 @@ pub fn get_candidates(
         },
     );
 
-    (hop1zuo1_candidates, candidates)
+    (
+        hop1zuo1_candidates
+            .into_iter()
+            .map(message::PureMove::from)
+            .collect(),
+        candidates
+            .into_iter()
+            .map(message::PureMove::from)
+            .collect(),
+    )
 }
 
 /// When completely stuck, call this function to end the game.
@@ -378,16 +384,9 @@ pub fn apply_normal_move(
             // 持ち駒から打つ際の違法手というのが実は自明なものを除いて不存在なので、
             // ここで弾かれるとしたらコードがバグっているということになる。
             // したがって、 return Err ではなく unreachable としてある。
-            {
-                if !hop1zuo1_candidates.contains(
-                    &cetkaik_yhuap_move_candidates::PureMove::NonTamMoveFromHopZuo {
-                        color,
-                        prof,
-                        dest,
-                    },
-                ) {
-                    unreachable!("inconsistencies found between cetkaik_yhuap_move_candidates::PureMove::NonTamMoveFromHopZuo and cetkaik_full_state_transition::apply_nontam_move")
-                }
+
+            if !hop1zuo1_candidates.contains(&message::PureMove::NormalMove(msg)) {
+                unreachable!("inconsistencies found between cetkaik_yhuap_move_candidates::PureMove::NonTamMoveFromHopZuo and cetkaik_full_state_transition::apply_nontam_move")
             }
 
             Ok(Probabilistic::Pure(state::HandNotResolved {
@@ -412,11 +411,7 @@ pub fn apply_normal_move(
             first_dest,
             second_dest,
         } => {
-            if candidates.contains(&cetkaik_yhuap_move_candidates::PureMove::TamMoveNoStep {
-                src,
-                first_dest,
-                second_dest,
-            }) {
+            if candidates.contains(&message::PureMove::NormalMove(msg)) {
                 apply_tam_move(old_state, src, first_dest, second_dest, None, config)
             } else {
                 Err("The provided TamMoveNoStep was rejected by the crate `cetkaik_yhuap_move_candidates`.")
@@ -428,14 +423,7 @@ pub fn apply_normal_move(
             second_dest,
             step,
         } => {
-            if candidates.contains(
-                &cetkaik_yhuap_move_candidates::PureMove::TamMoveStepsDuringFormer {
-                    src,
-                    first_dest,
-                    second_dest,
-                    step,
-                },
-            ) {
+            if candidates.contains(&message::PureMove::NormalMove(msg)) {
                 apply_tam_move(old_state, src, first_dest, second_dest, Some(step), config)
             } else {
                 Err("The provided TamMoveStepsDuringFormer was rejected by the crate `cetkaik_yhuap_move_candidates`.")
@@ -447,14 +435,7 @@ pub fn apply_normal_move(
             second_dest,
             step,
         } => {
-            if candidates.contains(
-                &cetkaik_yhuap_move_candidates::PureMove::TamMoveStepsDuringLatter {
-                    src,
-                    first_dest,
-                    second_dest,
-                    step,
-                },
-            ) {
+            if candidates.contains(&message::PureMove::NormalMove(msg)) {
                 apply_tam_move(old_state, src, first_dest, second_dest, Some(step), config)
             } else {
                 Err("The provided TamMoveStepsDuringLatter was rejected by the crate `cetkaik_yhuap_move_candidates`.")
@@ -462,38 +443,14 @@ pub fn apply_normal_move(
         }
 
         message::NormalMove::NonTamMoveSrcDst { src, dest } => {
-            if candidates.contains(&cetkaik_yhuap_move_candidates::PureMove::NonTamMoveSrcDst {
-                src,
-                dest,
-                is_water_entry_ciurl: true,
-            }) || candidates.contains(
-                &cetkaik_yhuap_move_candidates::PureMove::NonTamMoveSrcDst {
-                    src,
-                    dest,
-                    is_water_entry_ciurl: false,
-                },
-            ) {
+            if candidates.contains(&message::PureMove::NormalMove(msg)) {
                 apply_nontam_move(old_state, src, dest, None, config)
             } else {
                 Err("The provided NonTamMoveSrcDst was rejected by the crate `cetkaik_yhuap_move_candidates`.")
             }
         }
         message::NormalMove::NonTamMoveSrcStepDstFinite { src, step, dest } => {
-            if candidates.contains(
-                &cetkaik_yhuap_move_candidates::PureMove::NonTamMoveSrcStepDstFinite {
-                    src,
-                    step,
-                    dest,
-                    is_water_entry_ciurl: true,
-                },
-            ) || candidates.contains(
-                &cetkaik_yhuap_move_candidates::PureMove::NonTamMoveSrcStepDstFinite {
-                    src,
-                    step,
-                    dest,
-                    is_water_entry_ciurl: false,
-                },
-            ) {
+            if candidates.contains(&message::PureMove::NormalMove(msg)) {
                 apply_nontam_move(old_state, src, dest, Some(step), config)
             } else {
                 Err("The provided NonTamMoveSrcStepDstFinite was rejected by the crate `cetkaik_yhuap_move_candidates`.")
