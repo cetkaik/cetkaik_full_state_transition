@@ -350,7 +350,7 @@ pub fn apply_normal_move(
 ) -> Result<Probabilistic<state::HandNotResolved>, &'static str> {
     let (hop1zuo1_candidates, candidates) = get_candidates(&old_state, config);
     match msg {
-        message::NormalMove::NonTamMoveFromHand { color, prof, dest } => {
+        message::NormalMove::NonTamMoveFromHopZuo { color, prof, dest } => {
             let mut new_field = old_state
                 .f
                 .find_and_remove_piece_from_hop1zuo1(color, prof, old_state.whose_turn)
@@ -386,7 +386,7 @@ pub fn apply_normal_move(
                         dest,
                     },
                 ) {
-                    unreachable!("inconsistencies found between cetkaik_yhuap_move_candidates::PureMove::NonTamMoveFromHand and cetkaik_full_state_transition::apply_nontam_move")
+                    unreachable!("inconsistencies found between cetkaik_yhuap_move_candidates::PureMove::NonTamMoveFromHopZuo and cetkaik_full_state_transition::apply_nontam_move")
                 }
             }
 

@@ -2,16 +2,16 @@
 authors = ["jekto_vatimeliju <jekto.vatimeliju@gmail.com>"]
 edition = "2018"
 name = "cetkaik_full_state_transition"
-version = "0.1.13"
+version = "0.2.0"
 license = "MIT"
 description = "The full state transition functions for cetkaik. See https://sites.google.com/view/cet2kaik/the-standardized-rule-in-english for more context."
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cetkaik_calculate_hand = "0.1.5"
-cetkaik_core = "0.3.0"
-cetkaik_yhuap_move_candidates = "0.2.2"
+cetkaik_calculate_hand = "0.1.6"
+cetkaik_core = "0.3.1"
+cetkaik_yhuap_move_candidates = "0.2.3"
 readonly = "0.2.0"
 maplit = "1.0.2"
 enum_primitive = "0.1.1"

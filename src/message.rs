@@ -1,5 +1,77 @@
 use super::absolute;
 
+pub enum PureMove {
+    InfAfterStep(InfAfterStep),
+    NormalMove(NormalMove),
+}
+
+impl From<cetkaik_yhuap_move_candidates::PureMove> for PureMove {
+    fn from(candidate: cetkaik_yhuap_move_candidates::PureMove) -> PureMove {
+        match candidate {
+            cetkaik_yhuap_move_candidates::PureMove::TamMoveNoStep {
+                src,
+                first_dest,
+                second_dest,
+            } => PureMove::NormalMove(NormalMove::TamMoveNoStep {
+                src,
+                first_dest,
+                second_dest,
+            }),
+
+            cetkaik_yhuap_move_candidates::PureMove::TamMoveStepsDuringFormer {
+                src,
+                step,
+                first_dest,
+                second_dest,
+            } => PureMove::NormalMove(NormalMove::TamMoveStepsDuringFormer {
+                src,
+                step,
+                first_dest,
+                second_dest,
+            }),
+
+            cetkaik_yhuap_move_candidates::PureMove::TamMoveStepsDuringLatter {
+                src,
+                step,
+                first_dest,
+                second_dest,
+            } => PureMove::NormalMove(NormalMove::TamMoveStepsDuringLatter {
+                src,
+                step,
+                first_dest,
+                second_dest,
+            }),
+
+            cetkaik_yhuap_move_candidates::PureMove::NonTamMoveSrcStepDstFinite {
+                src,
+                step,
+                dest,
+                is_water_entry_ciurl: _,
+            } => PureMove::NormalMove(NormalMove::NonTamMoveSrcStepDstFinite { src, step, dest }),
+
+            cetkaik_yhuap_move_candidates::PureMove::InfAfterStep {
+                src,
+                step,
+                planned_direction,
+            } => PureMove::InfAfterStep(InfAfterStep {
+                src,
+                step,
+                planned_direction,
+            }),
+
+            cetkaik_yhuap_move_candidates::PureMove::NonTamMoveFromHopZuo { color, prof, dest } => {
+                PureMove::NormalMove(NormalMove::NonTamMoveFromHopZuo { color, prof, dest })
+            }
+
+            cetkaik_yhuap_move_candidates::PureMove::NonTamMoveSrcDst {
+                src,
+                dest,
+                is_water_entry_ciurl: _,
+            } => PureMove::NormalMove(NormalMove::NonTamMoveSrcDst { src, dest }),
+        }
+    }
+}
+
 /// Describes the moves that require a stepping-over cast
 /// (that is, when after stepping over a piece you plan to make a movement with infinite range).
 /// ／踏越え判定が必要になるタイプの移動を表現する型。
@@ -33,7 +105,7 @@ pub enum NormalMove {
         step: absolute::Coord,
         dest: absolute::Coord,
     },
-    NonTamMoveFromHand {
+    NonTamMoveFromHopZuo {
         color: cetkaik_core::Color,
         prof: cetkaik_core::Profession,
         dest: absolute::Coord,
@@ -230,7 +302,7 @@ pub mod binary {
                     second_dest: Some(dest),
                     tag: Tag::NonTamMoveSrcStepDstFinite,
                 },
-                NormalMove::NonTamMoveFromHand { color, prof, dest } => {
+                NormalMove::NonTamMoveFromHopZuo { color, prof, dest } => {
                     use cetkaik_core::Color::{Huok2, Kok1};
 
                     #[allow(clippy::cast_sign_loss)]
@@ -285,7 +357,7 @@ pub mod binary {
             use std::convert::TryInto;
             let tag: u8 = ((v & (15 << 28)) >> 28).try_into().unwrap();
             if tag == 0
-            /* NormalMove::NonTamMoveFromHand */
+            /* NormalMove::NonTamMoveFromHopZuo */
             {
                 use cetkaik_core::Color::{Huok2, Kok1};
                 let prof: u8 = (v & 255).try_into().unwrap();
@@ -302,12 +374,12 @@ pub mod binary {
                 let zero = (v & (0b1111_1111_1111 << 9)) >> 9;
 
                 if zero != 0 {
-                    return Err("Expected zero bits in NormalMove::NonTamMoveFromHand");
+                    return Err("Expected zero bits in NormalMove::NonTamMoveFromHopZuo");
                 }
 
                 let dest: u8 = ((v & (127 << 21)) >> 21).try_into().unwrap();
                 let dest = from_7bit_(dest)?.ok_or("Invalid destination")?;
-                Ok(NormalMove::NonTamMoveFromHand { color, prof, dest })
+                Ok(NormalMove::NonTamMoveFromHopZuo { color, prof, dest })
             } else {
                 Ok(match Bag::from_binary(v)? {
                     Bag {
@@ -420,7 +492,7 @@ pub mod binary {
     /// * bit 14-20: `first_dest`
     /// * bit 21-27: `second_dest` / `dest` / `planned_direction`
     ///
-    /// If `tag` is zero, then the encoded value is `NormalMove::NonTamMoveFromHand`;   
+    /// If `tag` is zero, then the encoded value is `NormalMove::NonTamMoveFromHopZuo`;   
     /// * bit 0-7: `prof`
     /// * bit 8: `color` (`0` if red; `1` if black)
     /// * bit 9-20: zero bits
