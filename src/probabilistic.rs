@@ -21,6 +21,23 @@ pub enum Probabilistic<T> {
     },
 }
 
+impl<T: Clone> Probabilistic<T> {
+    #[must_use]
+    pub fn choose(self) -> (T, Option<usize>) {
+        let prob: Prob<_> = self.into();
+        prob.choose()
+    }
+
+    #[must_use]
+    pub fn choose_when_no_ciurl(self) -> T {
+        let prob: Prob<_> = self.into();
+        match prob.choose() {
+            (t, None) => t,
+            _ => panic!("ciurl exists; call `choose` instead."),
+        }
+    }
+}
+
 impl<T: Clone> Into<Prob<(T, Option<usize>)>> for Probabilistic<T> {
     fn into(self) -> Prob<(T, Option<usize>)> {
         match self {

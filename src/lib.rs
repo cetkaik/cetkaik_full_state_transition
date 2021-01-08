@@ -286,50 +286,57 @@ fn apply_nontam_move(
     Ok(Probabilistic::Pure(success))
 }
 
-#[must_use]
-pub fn get_candidates(
-    old_state: &state::A,
-    config: Config,
-) -> (Vec<message::PureMove>, Vec<message::PureMove>) {
-    use cetkaik_yhuap_move_candidates::{
-        from_hop1zuo1_candidates, not_from_hop1zuo1_candidates_, to_relative_field, PureGameState,
-    };
+impl state::A {
+    #[must_use]
+    pub fn get_candidates(
+        &self,
+        config: Config,
+    ) -> (Vec<message::PureMove>, Vec<message::PureMove>) {
+        use cetkaik_yhuap_move_candidates::{
+            from_hop1zuo1_candidates, not_from_hop1zuo1_candidates_, to_relative_field,
+            PureGameState,
+        };
 
-    // must set it so that old_state.whose_turn points downward
-    let perspective = match old_state.whose_turn {
-        absolute::Side::IASide => cetkaik_core::perspective::Perspective::IaIsUpAndPointsDownward,
-        absolute::Side::ASide => cetkaik_core::perspective::Perspective::IaIsDownAndPointsUpward,
-    };
+        // must set it so that self.whose_turn points downward
+        let perspective = match self.whose_turn {
+            absolute::Side::IASide => {
+                cetkaik_core::perspective::Perspective::IaIsUpAndPointsDownward
+            }
+            absolute::Side::ASide => {
+                cetkaik_core::perspective::Perspective::IaIsDownAndPointsUpward
+            }
+        };
 
-    let hop1zuo1_candidates = from_hop1zuo1_candidates(&PureGameState {
-        perspective,
-        opponent_has_just_moved_tam: old_state.tam_has_moved_previously,
-        tam_itself_is_tam_hue: config.tam_itself_is_tam_hue,
-        f: to_relative_field(old_state.f.clone(), perspective),
-    });
-
-    let candidates = not_from_hop1zuo1_candidates_(
-        &cetkaik_yhuap_move_candidates::Config {
-            allow_kut2tam2: true,
-        },
-        &PureGameState {
+        let hop1zuo1_candidates = from_hop1zuo1_candidates(&PureGameState {
             perspective,
-            opponent_has_just_moved_tam: old_state.tam_has_moved_previously,
+            opponent_has_just_moved_tam: self.tam_has_moved_previously,
             tam_itself_is_tam_hue: config.tam_itself_is_tam_hue,
-            f: to_relative_field(old_state.f.clone(), perspective),
-        },
-    );
+            f: to_relative_field(self.f.clone(), perspective),
+        });
 
-    (
-        hop1zuo1_candidates
-            .into_iter()
-            .map(message::PureMove::from)
-            .collect(),
-        candidates
-            .into_iter()
-            .map(message::PureMove::from)
-            .collect(),
-    )
+        let candidates = not_from_hop1zuo1_candidates_(
+            &cetkaik_yhuap_move_candidates::Config {
+                allow_kut2tam2: true,
+            },
+            &PureGameState {
+                perspective,
+                opponent_has_just_moved_tam: self.tam_has_moved_previously,
+                tam_itself_is_tam_hue: config.tam_itself_is_tam_hue,
+                f: to_relative_field(self.f.clone(), perspective),
+            },
+        );
+
+        (
+            hop1zuo1_candidates
+                .into_iter()
+                .map(message::PureMove::from)
+                .collect(),
+            candidates
+                .into_iter()
+                .map(message::PureMove::from)
+                .collect(),
+        )
+    }
 }
 
 /// When completely stuck, call this function to end the game.
@@ -338,7 +345,7 @@ pub fn no_move_possible_at_all(
     old_state: &state::A,
     config: Config,
 ) -> Result<state::HandResolved, &'static str> {
-    let (hop1zuo1_candidates, candidates) = get_candidates(&old_state, config);
+    let (hop1zuo1_candidates, candidates) = old_state.get_candidates(config);
     if hop1zuo1_candidates.is_empty() && candidates.is_empty() {
         Ok(state::HandResolved::GameEndsWithoutTymokTaxot(
             old_state.scores.which_side_is_winning(),
@@ -354,7 +361,7 @@ pub fn apply_normal_move(
     msg: message::NormalMove,
     config: Config,
 ) -> Result<Probabilistic<state::HandNotResolved>, &'static str> {
-    let (hop1zuo1_candidates, candidates) = get_candidates(&old_state, config);
+    let (hop1zuo1_candidates, candidates) = old_state.get_candidates(config);
     match msg {
         message::NormalMove::NonTamMoveFromHopZuo { color, prof, dest } => {
             let mut new_field = old_state
@@ -473,31 +480,17 @@ pub fn apply_inf_after_step(
         return Err("In InfAfterStep, `step` is not occupied; illegal");
     }
 
-    let perspective = match old_state.whose_turn {
-        absolute::Side::IASide => cetkaik_core::perspective::Perspective::IaIsUpAndPointsDownward,
-        absolute::Side::ASide => cetkaik_core::perspective::Perspective::IaIsDownAndPointsUpward,
-    };
-
-    let candidates = cetkaik_yhuap_move_candidates::not_from_hop1zuo1_candidates_(
-        &cetkaik_yhuap_move_candidates::Config {
-            allow_kut2tam2: true,
-        },
-        &cetkaik_yhuap_move_candidates::PureGameState {
-            perspective,
-            opponent_has_just_moved_tam: old_state.tam_has_moved_previously,
-            tam_itself_is_tam_hue: config.tam_itself_is_tam_hue,
-            f: cetkaik_yhuap_move_candidates::to_relative_field(old_state.f.clone(), perspective),
-        },
-    );
+    let (hop1zuo1_candidates, candidates) = old_state.get_candidates(config);
+    assert!(hop1zuo1_candidates.is_empty());
 
     if !candidates
         .into_iter()
         .filter(|cand| match cand {
-            cetkaik_yhuap_move_candidates::PureMove::InfAfterStep {
+            message::PureMove::InfAfterStep(message::InfAfterStep {
                 src,
                 step,
                 planned_direction: _,
-            } => *src == msg.src && *step == msg.step,
+            }) => *src == msg.src && *step == msg.step,
             _ => false,
         })
         .count()
