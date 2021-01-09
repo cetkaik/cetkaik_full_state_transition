@@ -586,6 +586,60 @@ fn move_nontam_piece_from_src_to_dest_while_taking_opponent_piece_if_needed(
     Ok((new_board, None))
 }
 
+impl state::C {
+    #[must_use]
+    pub fn get_candidates(&self, config: Config) -> Vec<message::AfterHalfAcceptance> {
+        let perspective = match self.c.whose_turn {
+            absolute::Side::IASide => {
+                cetkaik_core::perspective::Perspective::IaIsUpAndPointsDownward
+            }
+            absolute::Side::ASide => {
+                cetkaik_core::perspective::Perspective::IaIsDownAndPointsUpward
+            }
+        };
+        let candidates = cetkaik_yhuap_move_candidates::not_from_hop1zuo1_candidates_(
+            &cetkaik_yhuap_move_candidates::Config {
+                allow_kut2tam2: true,
+            },
+            &cetkaik_yhuap_move_candidates::PureGameState {
+                perspective,
+                opponent_has_just_moved_tam: false, /* it doesn't matter */
+                tam_itself_is_tam_hue: config.tam_itself_is_tam_hue,
+                f: cetkaik_yhuap_move_candidates::to_relative_field(self.c.f.clone(), perspective),
+            },
+        );
+
+        let destinations = candidates.into_iter().filter_map(|cand| match cand {
+            cetkaik_yhuap_move_candidates::PureMove::InfAfterStep {
+                src,
+                step,
+                planned_direction,
+            } => {
+                if src == self.c.flying_piece_src
+                    && step == self.c.flying_piece_step
+                    && self.ciurl >= cetkaik_core::absolute::distance(step, planned_direction)
+                /*
+                must also check whether the ciurl limit is not violated
+                投げ棒による距離限界についても検査が要る
+                */
+                {
+                    Some(planned_direction)
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        });
+
+        let mut ans = vec![message::AfterHalfAcceptance { dest: None }];
+
+        for dest in destinations {
+            ans.push(message::AfterHalfAcceptance { dest: Some(dest) })
+        }
+        ans
+    }
+}
+
 /// `AfterHalfAcceptance` sends `C` to `Probabilistic<HandNotResolved>`
 pub fn apply_after_half_acceptance(
     old_state: &state::C,
@@ -607,76 +661,21 @@ pub fn apply_after_half_acceptance(
         tam2tysak2_raw_penalty: 0,
     };
 
-    let state::C {
-        c: state::CWithoutCiurl {
-            flying_piece_src, ..
-        },
-        ciurl,
-    } = *old_state;
+    let candidates = old_state.get_candidates(config);
+
+    if !candidates.contains(&msg) {
+        return Err(
+                    "The provided InfAfterStep was rejected either by the crate `cetkaik_yhuap_move_candidates`, or because the ciurl limit was exceeded.",
+                );
+    }
 
     if let Some(dest) = msg.dest {
-        // it is possible that the destination is illegal.
-        // dest に変な値を突っ込まれることに対する対策が必要なので検閲する。
-        {
-            let perspective = match old_state.c.whose_turn {
-                absolute::Side::IASide => {
-                    cetkaik_core::perspective::Perspective::IaIsUpAndPointsDownward
-                }
-                absolute::Side::ASide => {
-                    cetkaik_core::perspective::Perspective::IaIsDownAndPointsUpward
-                }
-            };
-            let candidates = cetkaik_yhuap_move_candidates::not_from_hop1zuo1_candidates_(
-                &cetkaik_yhuap_move_candidates::Config {
-                    allow_kut2tam2: true,
-                },
-                &cetkaik_yhuap_move_candidates::PureGameState {
-                    perspective,
-                    opponent_has_just_moved_tam: false, /* it doesn't matter */
-                    tam_itself_is_tam_hue: config.tam_itself_is_tam_hue,
-                    f: cetkaik_yhuap_move_candidates::to_relative_field(
-                        old_state.c.f.clone(),
-                        perspective,
-                    ),
-                },
-            );
-            if !candidates
-                .into_iter()
-                .filter(|cand| match cand {
-                    cetkaik_yhuap_move_candidates::PureMove::InfAfterStep {
-                        src,
-                        step,
-                        planned_direction,
-                    } => {
-                        *src == old_state.c.flying_piece_src
-                            && *step == old_state.c.flying_piece_step
-                            && *planned_direction == dest
-                    }
-                    _ => false,
-                })
-                .count()
-                > 0
-            {
-                return Err(
-                    "The provided InfAfterStep was rejected by the crate `cetkaik_yhuap_move_candidates`.",
-                );
-            }
-
-            // must also check whether the ciurl limit is not violated
-            // 投げ棒による距離限界についても検査が要る
-            if ciurl < cetkaik_core::absolute::distance(old_state.c.flying_piece_step, dest) {
-                return Err(
-                    "The provided InfAfterStep was rejected because the ciurl limit was exceeded.",
-                );
-            }
-        }
-
         let piece = old_state.piece_at_flying_piece_src();
 
         let (new_board, maybe_captured_piece) =
             move_nontam_piece_from_src_to_dest_while_taking_opponent_piece_if_needed(
                 &old_state.c.f.board,
-                flying_piece_src,
+                old_state.c.flying_piece_src,
                 dest,
                 old_state.c.whose_turn,
             )?;
@@ -709,7 +708,7 @@ pub fn apply_after_half_acceptance(
         // Trying to enter the water without any exemptions (neither the piece started from within water, nor the piece is a Vessel).
         // Hence sticks must be cast.
         // 入水判定が免除される特例（出発地点が皇水であるか、移動している駒が船である）なしで水に入ろうとしているので、判定が必要。
-        if !absolute::is_water(flying_piece_src)
+        if !absolute::is_water(old_state.c.flying_piece_src)
             && !piece.has_prof(cetkaik_core::Profession::Nuak1)
             && absolute::is_water(dest)
         {
