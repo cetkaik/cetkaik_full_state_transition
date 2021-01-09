@@ -451,7 +451,6 @@ pub fn apply_inf_after_step(
     }
 
     let (hop1zuo1_candidates, candidates) = old_state.get_candidates(config);
-    assert!(hop1zuo1_candidates.is_empty());
 
     let filtered: Vec<_> = candidates
         .into_iter()
