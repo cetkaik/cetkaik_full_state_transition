@@ -2,7 +2,7 @@
 authors = ["jekto_vatimeliju <jekto.vatimeliju@gmail.com>"]
 edition = "2018"
 name = "cetkaik_full_state_transition"
-version = "0.2.3"
+version = "0.2.4"
 license = "MIT"
 description = "The full state transition functions for cetkaik. See https://sites.google.com/view/cet2kaik/the-standardized-rule-in-english for more context."
 

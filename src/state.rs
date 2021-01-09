@@ -110,9 +110,12 @@ impl state::A {
             opponent_has_just_moved_tam: self.tam_has_moved_previously,
             tam_itself_is_tam_hue: config.tam_itself_is_tam_hue,
             f: to_relative_field(self.f.clone(), perspective),
-        });
+        })
+        .into_iter()
+        .map(super::message::PureMove::from)
+        .collect::<Vec<_>>();
 
-        let candidates = not_from_hop1zuo1_candidates_(
+        let mut candidates = not_from_hop1zuo1_candidates_(
             &cetkaik_yhuap_move_candidates::Config {
                 allow_kut2tam2: true,
             },
@@ -122,18 +125,62 @@ impl state::A {
                 tam_itself_is_tam_hue: config.tam_itself_is_tam_hue,
                 f: to_relative_field(self.f.clone(), perspective),
             },
-        );
-
-        (
-            hop1zuo1_candidates
-                .into_iter()
-                .map(super::message::PureMove::from)
-                .collect(),
-            candidates
-                .into_iter()
-                .map(super::message::PureMove::from)
-                .collect(),
         )
+        .into_iter()
+        .map(super::message::PureMove::from)
+        .collect::<Vec<_>>();
+
+        if self.tam_has_moved_previously
+            && config.moving_tam_immediately_after_tam_has_moved == super::Consequence::Forbidden
+        {
+            candidates = candidates
+                .into_iter()
+                .filter(|a| {
+                    !matches!(
+                        a,
+                        super::message::PureMove::NormalMove(
+                            super::message::NormalMove::TamMoveNoStep { .. },
+                        ) | super::message::PureMove::NormalMove(
+                            super::message::NormalMove::TamMoveStepsDuringFormer { .. },
+                        ) | super::message::PureMove::NormalMove(
+                            super::message::NormalMove::TamMoveStepsDuringLatter { .. },
+                        )
+                    )
+                })
+                .collect();
+        }
+
+        if config.tam_mun_mok == super::Consequence::Forbidden {
+            candidates = candidates
+                .into_iter()
+                .filter(|a| {
+                    match a {
+                        super::message::PureMove::NormalMove(
+                            super::message::NormalMove::TamMoveNoStep {
+                                src, second_dest, ..
+                            },
+                        )
+                        | super::message::PureMove::NormalMove(
+                            super::message::NormalMove::TamMoveStepsDuringFormer {
+                                src,
+                                second_dest,
+                                ..
+                            },
+                        )
+                        | super::message::PureMove::NormalMove(
+                            super::message::NormalMove::TamMoveStepsDuringLatter {
+                                src,
+                                second_dest,
+                                ..
+                            },
+                        ) => src != second_dest, /* false when mun1mok1 */
+                        _ => true, /* always allow */
+                    }
+                })
+                .collect();
+        }
+
+        (hop1zuo1_candidates, candidates)
     }
 }
 
