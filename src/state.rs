@@ -13,6 +13,78 @@ pub struct A {
 }
 
 impl state::A {
+    /// ```
+    /// use cetkaik_full_state_transition::message::InfAfterStep;
+    /// use cetkaik_full_state_transition::*;
+    /// use cetkaik_core::absolute;
+    /// use cetkaik_core::absolute::Coord;
+    /// use cetkaik_core::absolute::Row::*;
+    /// use cetkaik_core::absolute::Column::*;
+    /// let ia_first = state::A {
+    ///     whose_turn: absolute::Side::IASide,
+    ///     scores: Scores::new(),
+    ///     rate: Rate::X1,
+    ///     season: Season::Iei2,
+    ///     tam_has_moved_previously: false,
+    ///     f: absolute::Field {
+    ///         a_side_hop1zuo1: vec![],
+    ///         ia_side_hop1zuo1: vec![],
+    ///         board: cetkaik_core::absolute::yhuap_initial_board(),
+    ///     },
+    /// };
+    /// let (hop1zuo1_candidates, candidates) = ia_first.get_candidates(Config::cerke_online_alpha());
+    /// assert_eq!(hop1zuo1_candidates, vec![]);
+    /// let inf_after_step: Vec<_> = candidates.into_iter()
+    ///     .filter_map(|a|
+    ///         match a {
+    ///             message::PureMove::InfAfterStep(m) => Some(m),
+    ///             _ => None
+    ///         }
+    ///     ).collect();
+    /// assert_eq!(inf_after_step, vec![
+    ///     InfAfterStep { src: Coord(IA, P), step: Coord(AU, P), planned_direction: Coord(IA, P) },
+    ///     InfAfterStep { src: Coord(IA, K), step: Coord(AU, K), planned_direction: Coord(IA, K) },
+    ///     InfAfterStep { src: Coord(AU, P), step: Coord(AU, M), planned_direction: Coord(AU, C) },
+    ///     InfAfterStep { src: Coord(AU, P), step: Coord(AU, M), planned_direction: Coord(AU, P) },
+    ///     InfAfterStep { src: Coord(AU, M), step: Coord(AI, M), planned_direction: Coord(Y, M) },
+    ///     InfAfterStep { src: Coord(AU, M), step: Coord(AI, M), planned_direction: Coord(O, M) },
+    ///     InfAfterStep { src: Coord(AU, M), step: Coord(AI, M), planned_direction: Coord(U, M) },
+    ///     InfAfterStep { src: Coord(AU, M), step: Coord(AI, M), planned_direction: Coord(I, M) },
+    ///     InfAfterStep { src: Coord(AU, M), step: Coord(AI, M), planned_direction: Coord(AU, M) },
+    ///     InfAfterStep { src: Coord(AU, M), step: Coord(IA, M), planned_direction: Coord(AU, M) },
+    ///     InfAfterStep { src: Coord(AU, M), step: Coord(AU, X), planned_direction: Coord(AU, Z) },
+    ///     InfAfterStep { src: Coord(AU, M), step: Coord(AU, X), planned_direction: Coord(AU, C) },
+    ///     InfAfterStep { src: Coord(AU, M), step: Coord(AU, X), planned_direction: Coord(AU, M) },
+    ///     InfAfterStep { src: Coord(AU, M), step: Coord(AU, P), planned_direction: Coord(AU, M) },
+    ///     InfAfterStep { src: Coord(AU, M), step: Coord(AU, P), planned_direction: Coord(AU, C) },
+    ///     InfAfterStep { src: Coord(AU, X), step: Coord(AI, C), planned_direction: Coord(Y, X) },
+    ///     InfAfterStep { src: Coord(AU, X), step: Coord(AI, C), planned_direction: Coord(O, P) },
+    ///     InfAfterStep { src: Coord(AU, X), step: Coord(AI, C), planned_direction: Coord(Y, M) },
+    ///     InfAfterStep { src: Coord(AU, X), step: Coord(AI, C), planned_direction: Coord(AU, X) },
+    ///     InfAfterStep { src: Coord(AU, T), step: Coord(AI, N), planned_direction: Coord(O, K) },
+    ///     InfAfterStep { src: Coord(AU, T), step: Coord(AI, N), planned_direction: Coord(Y, L) },
+    ///     InfAfterStep { src: Coord(AU, T), step: Coord(AI, N), planned_direction: Coord(Y, T) },
+    ///     InfAfterStep { src: Coord(AU, T), step: Coord(AI, N), planned_direction: Coord(AU, T) },
+    ///     InfAfterStep { src: Coord(AU, L), step: Coord(AI, L), planned_direction: Coord(Y, L) },
+    ///     InfAfterStep { src: Coord(AU, L), step: Coord(AI, L), planned_direction: Coord(O, L) },
+    ///     InfAfterStep { src: Coord(AU, L), step: Coord(AI, L), planned_direction: Coord(U, L) },
+    ///     InfAfterStep { src: Coord(AU, L), step: Coord(AI, L), planned_direction: Coord(I, L) },
+    ///     InfAfterStep { src: Coord(AU, L), step: Coord(AI, L), planned_direction: Coord(AU, L) },
+    ///     InfAfterStep { src: Coord(AU, L), step: Coord(IA, L), planned_direction: Coord(AU, L) },
+    ///     InfAfterStep { src: Coord(AU, L), step: Coord(AU, K), planned_direction: Coord(AU, L) },
+    ///     InfAfterStep { src: Coord(AU, L), step: Coord(AU, K), planned_direction: Coord(AU, N) },
+    ///     InfAfterStep { src: Coord(AU, L), step: Coord(AU, T), planned_direction: Coord(AU, N) },
+    ///     InfAfterStep { src: Coord(AU, L), step: Coord(AU, T), planned_direction: Coord(AU, L) },
+    ///     InfAfterStep { src: Coord(AU, L), step: Coord(AU, T), planned_direction: Coord(AU, Z) },
+    ///     InfAfterStep { src: Coord(AU, K), step: Coord(AU, L), planned_direction: Coord(AU, K) },
+    ///     InfAfterStep { src: Coord(AU, K), step: Coord(AU, L), planned_direction: Coord(AU, N) },
+    ///     InfAfterStep { src: Coord(AI, Z), step: Coord(O, Z), planned_direction: Coord(U, Z) },
+    ///     InfAfterStep { src: Coord(AI, Z), step: Coord(O, Z), planned_direction: Coord(I, Z) },
+    ///     InfAfterStep { src: Coord(AI, Z), step: Coord(O, Z), planned_direction: Coord(Y, Z) },
+    ///     InfAfterStep { src: Coord(AI, Z), step: Coord(O, Z), planned_direction: Coord(AI, Z) },
+    ///     InfAfterStep { src: Coord(AI, Z), step: Coord(O, Z), planned_direction: Coord(AU, Z) }
+    /// ])
+    /// ```
     #[must_use]
     pub fn get_candidates(
         &self,
@@ -75,7 +147,10 @@ pub struct C {
 
 impl state::C {
     #[must_use]
-    pub fn get_candidates(&self, config: super::Config) -> Vec<super::message::AfterHalfAcceptance> {
+    pub fn get_candidates(
+        &self,
+        config: super::Config,
+    ) -> Vec<super::message::AfterHalfAcceptance> {
         let perspective = match self.c.whose_turn {
             absolute::Side::IASide => {
                 cetkaik_core::perspective::Perspective::IaIsUpAndPointsDownward

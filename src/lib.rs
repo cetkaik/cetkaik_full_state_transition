@@ -766,11 +766,10 @@ pub fn resolve(state: &state::HandNotResolved, config: Config) -> state::HandRes
         // nothing happened; hand the turn to the next person
         // 役ができていないので、次の人に手番を渡す
         // 減点分×レートは引く。
-        match state.scores.edit(
-            state.tam2tysak2_raw_penalty,
-            state.whose_turn,
-            state.rate,
-        ) {
+        match state
+            .scores
+            .edit(state.tam2tysak2_raw_penalty, state.whose_turn, state.rate)
+        {
             Ok(new_scores) => {
                 return state::HandResolved::NeitherTymokNorTaxot(state::A {
                     f: state.f.clone(),
