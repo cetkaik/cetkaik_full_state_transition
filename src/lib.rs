@@ -767,7 +767,7 @@ pub fn resolve(state: &state::HandNotResolved, config: Config) -> state::HandRes
         // 役ができていないので、次の人に手番を渡す
         // 減点分×レートは引く。
         match state.scores.edit(
-            -5 + state.tam2tysak2_raw_penalty,
+            state.tam2tysak2_raw_penalty,
             state.whose_turn,
             state.rate,
         ) {
