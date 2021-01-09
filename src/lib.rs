@@ -286,59 +286,6 @@ fn apply_nontam_move(
     Ok(Probabilistic::Pure(success))
 }
 
-impl state::A {
-    #[must_use]
-    pub fn get_candidates(
-        &self,
-        config: Config,
-    ) -> (Vec<message::PureMove>, Vec<message::PureMove>) {
-        use cetkaik_yhuap_move_candidates::{
-            from_hop1zuo1_candidates, not_from_hop1zuo1_candidates_, to_relative_field,
-            PureGameState,
-        };
-
-        // must set it so that self.whose_turn points downward
-        let perspective = match self.whose_turn {
-            absolute::Side::IASide => {
-                cetkaik_core::perspective::Perspective::IaIsUpAndPointsDownward
-            }
-            absolute::Side::ASide => {
-                cetkaik_core::perspective::Perspective::IaIsDownAndPointsUpward
-            }
-        };
-
-        let hop1zuo1_candidates = from_hop1zuo1_candidates(&PureGameState {
-            perspective,
-            opponent_has_just_moved_tam: self.tam_has_moved_previously,
-            tam_itself_is_tam_hue: config.tam_itself_is_tam_hue,
-            f: to_relative_field(self.f.clone(), perspective),
-        });
-
-        let candidates = not_from_hop1zuo1_candidates_(
-            &cetkaik_yhuap_move_candidates::Config {
-                allow_kut2tam2: true,
-            },
-            &PureGameState {
-                perspective,
-                opponent_has_just_moved_tam: self.tam_has_moved_previously,
-                tam_itself_is_tam_hue: config.tam_itself_is_tam_hue,
-                f: to_relative_field(self.f.clone(), perspective),
-            },
-        );
-
-        (
-            hop1zuo1_candidates
-                .into_iter()
-                .map(message::PureMove::from)
-                .collect(),
-            candidates
-                .into_iter()
-                .map(message::PureMove::from)
-                .collect(),
-        )
-    }
-}
-
 /// When completely stuck, call this function to end the game.
 /// ／完全に手詰まりのときは、この関数を呼び出すことで即時決着がつく。
 pub fn no_move_possible_at_all(
@@ -584,60 +531,6 @@ fn move_nontam_piece_from_src_to_dest_while_taking_opponent_piece_if_needed(
         }
     }
     Ok((new_board, None))
-}
-
-impl state::C {
-    #[must_use]
-    pub fn get_candidates(&self, config: Config) -> Vec<message::AfterHalfAcceptance> {
-        let perspective = match self.c.whose_turn {
-            absolute::Side::IASide => {
-                cetkaik_core::perspective::Perspective::IaIsUpAndPointsDownward
-            }
-            absolute::Side::ASide => {
-                cetkaik_core::perspective::Perspective::IaIsDownAndPointsUpward
-            }
-        };
-        let candidates = cetkaik_yhuap_move_candidates::not_from_hop1zuo1_candidates_(
-            &cetkaik_yhuap_move_candidates::Config {
-                allow_kut2tam2: true,
-            },
-            &cetkaik_yhuap_move_candidates::PureGameState {
-                perspective,
-                opponent_has_just_moved_tam: false, /* it doesn't matter */
-                tam_itself_is_tam_hue: config.tam_itself_is_tam_hue,
-                f: cetkaik_yhuap_move_candidates::to_relative_field(self.c.f.clone(), perspective),
-            },
-        );
-
-        let destinations = candidates.into_iter().filter_map(|cand| match cand {
-            cetkaik_yhuap_move_candidates::PureMove::InfAfterStep {
-                src,
-                step,
-                planned_direction,
-            } => {
-                if src == self.c.flying_piece_src
-                    && step == self.c.flying_piece_step
-                    && self.ciurl >= cetkaik_core::absolute::distance(step, planned_direction)
-                /*
-                must also check whether the ciurl limit is not violated
-                投げ棒による距離限界についても検査が要る
-                */
-                {
-                    Some(planned_direction)
-                } else {
-                    None
-                }
-            }
-            _ => None,
-        });
-
-        let mut ans = vec![message::AfterHalfAcceptance { dest: None }];
-
-        for dest in destinations {
-            ans.push(message::AfterHalfAcceptance { dest: Some(dest) })
-        }
-        ans
-    }
 }
 
 /// `AfterHalfAcceptance` sends `C` to `Probabilistic<HandNotResolved>`

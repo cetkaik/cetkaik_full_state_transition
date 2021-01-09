@@ -12,12 +12,119 @@ pub struct A {
     pub tam_has_moved_previously: bool,
 }
 
+impl state::A {
+    #[must_use]
+    pub fn get_candidates(
+        &self,
+        config: super::Config,
+    ) -> (Vec<super::message::PureMove>, Vec<super::message::PureMove>) {
+        use cetkaik_yhuap_move_candidates::{
+            from_hop1zuo1_candidates, not_from_hop1zuo1_candidates_, to_relative_field,
+            PureGameState,
+        };
+
+        // must set it so that self.whose_turn points downward
+        let perspective = match self.whose_turn {
+            absolute::Side::IASide => {
+                cetkaik_core::perspective::Perspective::IaIsUpAndPointsDownward
+            }
+            absolute::Side::ASide => {
+                cetkaik_core::perspective::Perspective::IaIsDownAndPointsUpward
+            }
+        };
+
+        let hop1zuo1_candidates = from_hop1zuo1_candidates(&PureGameState {
+            perspective,
+            opponent_has_just_moved_tam: self.tam_has_moved_previously,
+            tam_itself_is_tam_hue: config.tam_itself_is_tam_hue,
+            f: to_relative_field(self.f.clone(), perspective),
+        });
+
+        let candidates = not_from_hop1zuo1_candidates_(
+            &cetkaik_yhuap_move_candidates::Config {
+                allow_kut2tam2: true,
+            },
+            &PureGameState {
+                perspective,
+                opponent_has_just_moved_tam: self.tam_has_moved_previously,
+                tam_itself_is_tam_hue: config.tam_itself_is_tam_hue,
+                f: to_relative_field(self.f.clone(), perspective),
+            },
+        );
+
+        (
+            hop1zuo1_candidates
+                .into_iter()
+                .map(super::message::PureMove::from)
+                .collect(),
+            candidates
+                .into_iter()
+                .map(super::message::PureMove::from)
+                .collect(),
+        )
+    }
+}
+
 /// This is the state after the user has stepped over a piece and has cast the sticks so that the user can play to make an infinite movement from there. Seeing the sticks, the user is supposed to decide the final location and send it (`AfterHalfAcceptance`) to the server.
 /// ／踏越え後の無限移動をユーザーが行い、それに対して投げ棒で判定した後の状態。投げ棒を見て、ユーザーは最終的な移動場所をCに対しこれから送りつける。
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct C {
     pub c: CWithoutCiurl,
     pub ciurl: i32,
+}
+
+impl state::C {
+    #[must_use]
+    pub fn get_candidates(&self, config: super::Config) -> Vec<super::message::AfterHalfAcceptance> {
+        let perspective = match self.c.whose_turn {
+            absolute::Side::IASide => {
+                cetkaik_core::perspective::Perspective::IaIsUpAndPointsDownward
+            }
+            absolute::Side::ASide => {
+                cetkaik_core::perspective::Perspective::IaIsDownAndPointsUpward
+            }
+        };
+        let candidates = cetkaik_yhuap_move_candidates::not_from_hop1zuo1_candidates_(
+            &cetkaik_yhuap_move_candidates::Config {
+                allow_kut2tam2: true,
+            },
+            &cetkaik_yhuap_move_candidates::PureGameState {
+                perspective,
+                opponent_has_just_moved_tam: false, /* it doesn't matter */
+                tam_itself_is_tam_hue: config.tam_itself_is_tam_hue,
+                f: cetkaik_yhuap_move_candidates::to_relative_field(self.c.f.clone(), perspective),
+            },
+        );
+
+        let destinations = candidates.into_iter().filter_map(|cand| match cand {
+            cetkaik_yhuap_move_candidates::PureMove::InfAfterStep {
+                src,
+                step,
+                planned_direction,
+            } => {
+                if src == self.c.flying_piece_src
+                    && step == self.c.flying_piece_step
+                    && self.ciurl >= cetkaik_core::absolute::distance(step, planned_direction)
+                /*
+                must also check whether the ciurl limit is not violated
+                投げ棒による距離限界についても検査が要る
+                */
+                {
+                    Some(planned_direction)
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        });
+
+        let mut ans = vec![super::message::AfterHalfAcceptance { dest: None }];
+
+        for dest in destinations {
+            ans.push(super::message::AfterHalfAcceptance { dest: Some(dest) })
+        }
+        ans
+    }
 }
 
 /// Same as `C`, except that the ciurl is not mentioned.
