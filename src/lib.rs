@@ -413,6 +413,29 @@ pub fn apply_normal_move(
     }
 }
 
+/// ```
+/// use cetkaik_full_state_transition::message::InfAfterStep;
+/// use cetkaik_full_state_transition::*;
+/// use cetkaik_core::absolute;
+/// use cetkaik_core::absolute::Coord;
+/// use cetkaik_core::absolute::Row::*;
+/// use cetkaik_core::absolute::Column::*;
+/// let ia_first = state::A {
+///     whose_turn: absolute::Side::IASide,
+///     scores: Scores::new(),
+///     rate: Rate::X1,
+///     season: Season::Iei2,
+///     tam_has_moved_previously: false,
+///     f: absolute::Field {
+///         a_side_hop1zuo1: vec![],
+///         ia_side_hop1zuo1: vec![],
+///         board: cetkaik_core::absolute::yhuap_initial_board(),
+///     },
+/// };
+/// let inf_after_step = InfAfterStep { src: Coord(AU, L), step: Coord(AU, K), planned_direction: Coord(AU, L) };
+/// apply_inf_after_step(&ia_first, inf_after_step, Config::cerke_online_alpha()).unwrap();
+/// ```
+
 /// `InfAfterStep` sends `A` to `Probabilistic<C>`
 pub fn apply_inf_after_step(
     old_state: &state::A,
@@ -430,7 +453,7 @@ pub fn apply_inf_after_step(
     let (hop1zuo1_candidates, candidates) = old_state.get_candidates(config);
     assert!(hop1zuo1_candidates.is_empty());
 
-    if !candidates
+    let filtered: Vec<_> = candidates
         .into_iter()
         .filter(|cand| match cand {
             message::PureMove::InfAfterStep(message::InfAfterStep {
@@ -440,9 +463,9 @@ pub fn apply_inf_after_step(
             }) => *src == msg.src && *step == msg.step,
             _ => false,
         })
-        .count()
-        > 0
-    {
+        .collect();
+
+    if filtered.is_empty() {
         return Err(
             "The provided InfAfterStep was rejected by the crate `cetkaik_yhuap_move_candidates`.",
         );
@@ -728,7 +751,7 @@ pub fn resolve(state: &state::HandNotResolved, config: Config) -> state::HandRes
                 } = calculate_hands_and_score_from_pieces(&state.f.a_side_hop1zuo1).unwrap();
 
                 // whether newly-acquired hand exists
-                if new_hands.difference(&old_hands).count() > 0 {
+                if new_hands.difference(&old_hands).collect::<Vec<_>>().len() > 0 {
                     Some(new_score)
                 } else {
                     None
@@ -750,7 +773,7 @@ pub fn resolve(state: &state::HandNotResolved, config: Config) -> state::HandRes
                 } = calculate_hands_and_score_from_pieces(&state.f.ia_side_hop1zuo1).unwrap();
 
                 // whether newly-acquired hand exists
-                if new_hands.difference(&old_hands).count() > 0 {
+                if new_hands.difference(&old_hands).collect::<Vec<_>>().len() > 0 {
                     Some(new_score)
                 } else {
                     None
