@@ -450,7 +450,7 @@ pub fn apply_inf_after_step(
         return Err("In InfAfterStep, `step` is not occupied; illegal");
     }
 
-    let (hop1zuo1_candidates, candidates) = old_state.get_candidates(config);
+    let (_hop1zuo1, candidates) = old_state.get_candidates(config);
 
     let filtered: Vec<_> = candidates
         .into_iter()
