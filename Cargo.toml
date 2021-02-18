@@ -2,9 +2,10 @@
 authors = ["jekto_vatimeliju <jekto.vatimeliju@gmail.com>"]
 edition = "2018"
 name = "cetkaik_full_state_transition"
-version = "0.2.7"
+version = "0.2.8"
 license = "MIT"
 description = "The full state transition functions for cetkaik. See https://sites.google.com/view/cet2kaik/the-standardized-rule-in-english for more context."
+repository = "https://github.com/sozysozbot/cetkaik_full_state_transition"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
