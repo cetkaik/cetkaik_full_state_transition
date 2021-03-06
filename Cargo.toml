@@ -16,6 +16,6 @@ cetkaik_yhuap_move_candidates = "0.2.5"
 readonly = "0.2.0"
 maplit = "1.0.2"
 enum_primitive = "0.1.1"
-num = "0.3.1"
+num = "0.4.0"
 serde = { version = "1.0.123", features = ["derive"] }
 rand = "0.8.3"
