@@ -17,5 +17,5 @@ readonly = "0.2.0"
 maplit = "1.0.2"
 enum_primitive = "0.1.1"
 num = "0.3.1"
-serde = { version = "1.0.123", features = ["derive"] }
+serde = { version = "1.0.125", features = ["derive"] }
 rand = "0.8.3"
