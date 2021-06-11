@@ -28,6 +28,8 @@ impl<T: Clone> Probabilistic<T> {
         prob.choose()
     }
 
+    /// # Panics
+    /// Panics when called while ciurl exists.
     #[must_use]
     pub fn choose_when_no_ciurl(self) -> T {
         let prob: Prob<_> = self.into();
@@ -38,9 +40,9 @@ impl<T: Clone> Probabilistic<T> {
     }
 }
 
-impl<T: Clone> Into<Prob<(T, Option<usize>)>> for Probabilistic<T> {
-    fn into(self) -> Prob<(T, Option<usize>)> {
-        match self {
+impl<T: Clone> From<Probabilistic<T>> for Prob<(T, Option<usize>)> {
+    fn from(s: Probabilistic<T>) -> Prob<(T, Option<usize>)> {
+        match s {
             // Since this function does not contain any info on how who-goes-first gets decided,
             // to consistently display the ciurls, the implementer must, independent from this function,
             // consider how who-goes-first gets decided.
@@ -86,6 +88,8 @@ pub struct Prob<T>(pub Vec<(T, f64)>);
 impl<T> Prob<T> {
     #[must_use]
     /// Expects a float within the range of 0 up to but not including 1.
+    /// # Panics
+    /// Panics if float is outside the range.
     pub fn choose_by_uniform_random_variable(self, rand: f64) -> T {
         if !(0.0..1.0).contains(&rand) {
             panic!("Expects a float within the range of 0 up to but not including 1")

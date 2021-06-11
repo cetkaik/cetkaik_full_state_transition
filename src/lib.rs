@@ -743,11 +743,13 @@ pub fn resolve(state: &state::HandNotResolved, config: Config) -> state::HandRes
                 let ScoreAndHands {
                     score: _,
                     hands: old_hands,
-                } = calculate_hands_and_score_from_pieces(&state.previous_a_side_hop1zuo1).unwrap();
+                } = calculate_hands_and_score_from_pieces(&state.previous_a_side_hop1zuo1)
+                    .expect("cannot fail, since the supplied list of piece should not exceed the limit on the number of piece");
                 let ScoreAndHands {
                     score: new_score,
                     hands: new_hands,
-                } = calculate_hands_and_score_from_pieces(&state.f.a_side_hop1zuo1).unwrap();
+                } = calculate_hands_and_score_from_pieces(&state.f.a_side_hop1zuo1)
+                    .expect("cannot fail, since the supplied list of piece should not exceed the limit on the number of piece");
 
                 // whether newly-acquired hand exists
                 if new_hands.difference(&old_hands).collect::<Vec<_>>().len() > 0 {
@@ -765,14 +767,15 @@ pub fn resolve(state: &state::HandNotResolved, config: Config) -> state::HandRes
                     score: _,
                     hands: old_hands,
                 } = calculate_hands_and_score_from_pieces(&state.previous_ia_side_hop1zuo1)
-                    .unwrap();
+                .expect("cannot fail, since the supplied list of piece should not exceed the limit on the number of piece");
                 let ScoreAndHands {
                     score: new_score,
                     hands: new_hands,
-                } = calculate_hands_and_score_from_pieces(&state.f.ia_side_hop1zuo1).unwrap();
+                } = calculate_hands_and_score_from_pieces(&state.f.ia_side_hop1zuo1)
+                .expect("cannot fail, since the supplied list of piece should not exceed the limit on the number of piece");
 
                 // whether newly-acquired hand exists
-                if new_hands.difference(&old_hands).collect::<Vec<_>>().len() > 0 {
+                if new_hands.difference(&old_hands).count() > 0 {
                     Some(new_score)
                 } else {
                     None
