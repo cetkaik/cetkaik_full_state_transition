@@ -41,19 +41,19 @@ impl<T: Clone> Probabilistic<T> {
 }
 
 impl<T: Clone> From<Probabilistic<T>> for Prob<(T, Option<usize>)> {
-    fn from(s: Probabilistic<T>) -> Prob<(T, Option<usize>)> {
+    fn from(s: Probabilistic<T>) -> Self {
         match s {
             // Since this function does not contain any info on how who-goes-first gets decided,
             // to consistently display the ciurls, the implementer must, independent from this function,
             // consider how who-goes-first gets decided.
             // 先手を決定する手段についてはこの関数で定めないので、
             // 投げ棒を一貫して表示するには、この関数と独立で実装側で先手決定手段を考慮しなければならない。
-            Probabilistic::WhoGoesFirst { ia_first, a_first } => Prob(vec![
+            Probabilistic::WhoGoesFirst { ia_first, a_first } => Self(vec![
                 ((ia_first, None), 1.0 / 2.0),
                 ((a_first, None), 1.0 / 2.0),
             ]),
-            Probabilistic::Pure(t) => Prob(vec![((t, None), 1.0)]),
-            Probabilistic::Water { failure, success } => Prob(vec![
+            Probabilistic::Pure(t) => Self(vec![((t, None), 1.0)]),
+            Probabilistic::Water { failure, success } => Self(vec![
                 ((failure.clone(), Some(0)), 1.0 / 32.0),
                 ((failure.clone(), Some(1)), 5.0 / 32.0),
                 ((failure, Some(2)), 10.0 / 32.0),
@@ -68,7 +68,7 @@ impl<T: Clone> From<Probabilistic<T>> for Prob<(T, Option<usize>)> {
                 s3,
                 s4,
                 s5,
-            } => Prob(vec![
+            } => Self(vec![
                 ((s0, Some(0)), 1.0 / 32.0),
                 ((s1, Some(1)), 5.0 / 32.0),
                 ((s2, Some(2)), 10.0 / 32.0),

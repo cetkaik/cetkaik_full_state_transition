@@ -7,13 +7,13 @@ pub enum PureMove {
 }
 
 impl From<cetkaik_yhuap_move_candidates::PureMove> for PureMove {
-    fn from(candidate: cetkaik_yhuap_move_candidates::PureMove) -> PureMove {
+    fn from(candidate: cetkaik_yhuap_move_candidates::PureMove) -> Self {
         match candidate {
             cetkaik_yhuap_move_candidates::PureMove::TamMoveNoStep {
                 src,
                 first_dest,
                 second_dest,
-            } => PureMove::NormalMove(NormalMove::TamMoveNoStep {
+            } => Self::NormalMove(NormalMove::TamMoveNoStep {
                 src,
                 first_dest,
                 second_dest,
@@ -24,7 +24,7 @@ impl From<cetkaik_yhuap_move_candidates::PureMove> for PureMove {
                 step,
                 first_dest,
                 second_dest,
-            } => PureMove::NormalMove(NormalMove::TamMoveStepsDuringFormer {
+            } => Self::NormalMove(NormalMove::TamMoveStepsDuringFormer {
                 src,
                 step,
                 first_dest,
@@ -36,7 +36,7 @@ impl From<cetkaik_yhuap_move_candidates::PureMove> for PureMove {
                 step,
                 first_dest,
                 second_dest,
-            } => PureMove::NormalMove(NormalMove::TamMoveStepsDuringLatter {
+            } => Self::NormalMove(NormalMove::TamMoveStepsDuringLatter {
                 src,
                 step,
                 first_dest,
@@ -48,27 +48,27 @@ impl From<cetkaik_yhuap_move_candidates::PureMove> for PureMove {
                 step,
                 dest,
                 is_water_entry_ciurl: _,
-            } => PureMove::NormalMove(NormalMove::NonTamMoveSrcStepDstFinite { src, step, dest }),
+            } => Self::NormalMove(NormalMove::NonTamMoveSrcStepDstFinite { src, step, dest }),
 
             cetkaik_yhuap_move_candidates::PureMove::InfAfterStep {
                 src,
                 step,
                 planned_direction,
-            } => PureMove::InfAfterStep(InfAfterStep {
+            } => Self::InfAfterStep(InfAfterStep {
                 src,
                 step,
                 planned_direction,
             }),
 
             cetkaik_yhuap_move_candidates::PureMove::NonTamMoveFromHopZuo { color, prof, dest } => {
-                PureMove::NormalMove(NormalMove::NonTamMoveFromHopZuo { color, prof, dest })
+                Self::NormalMove(NormalMove::NonTamMoveFromHopZuo { color, prof, dest })
             }
 
             cetkaik_yhuap_move_candidates::PureMove::NonTamMoveSrcDst {
                 src,
                 dest,
                 is_water_entry_ciurl: _,
-            } => PureMove::NormalMove(NormalMove::NonTamMoveSrcDst { src, dest }),
+            } => Self::NormalMove(NormalMove::NonTamMoveSrcDst { src, dest }),
         }
     }
 }
@@ -172,7 +172,7 @@ pub mod binary {
     }
 
     use cetkaik_core::Profession;
-    fn prof_to_bin(p: Profession) -> i8 {
+    const fn prof_to_bin(p: Profession) -> i8 {
         match p {
             Profession::Nuak1 => -1,
             Profession::Kauk2 => 1,
@@ -187,7 +187,7 @@ pub mod binary {
         }
     }
 
-    fn bin_to_prof(a: i8) -> Result<Profession, &'static str> {
+    const fn bin_to_prof(a: i8) -> Result<Profession, &'static str> {
         match a {
             -1 => Ok(Profession::Nuak1),
             1 => Ok(Profession::Kauk2),
@@ -251,7 +251,7 @@ pub mod binary {
                     first_dest: None,
                     second_dest: Some(planned_direction),
                     tag: Tag::InfAfterStep,
-                } => Ok(InfAfterStep {
+                } => Ok(Self {
                     src,
                     step,
                     planned_direction,
@@ -280,7 +280,7 @@ pub mod binary {
                     first_dest: None,
                     second_dest: dest,
                     tag: Tag::AfterHalfAcceptance,
-                } => Ok(AfterHalfAcceptance { dest }),
+                } => Ok(Self { dest }),
                 _ => Err("cannot interpret the input as AfterHalfAcceptance"),
             }
         }
@@ -380,7 +380,7 @@ pub mod binary {
 
                 let dest: u8 = ((v & (127 << 21)) >> 21).try_into().unwrap();
                 let dest = from_7bit_(dest)?.ok_or("Invalid destination")?;
-                Ok(NormalMove::NonTamMoveFromHopZuo { color, prof, dest })
+                Ok(Self::NonTamMoveFromHopZuo { color, prof, dest })
             } else {
                 Ok(match Bag::from_binary(v)? {
                     Bag {
@@ -389,7 +389,7 @@ pub mod binary {
                         second_dest: Some(second_dest),
                         step: Some(step),
                         tag: Tag::TamMoveStepsDuringLatter,
-                    } => NormalMove::TamMoveStepsDuringLatter {
+                    } => Self::TamMoveStepsDuringLatter {
                         src,
                         first_dest,
                         second_dest,
@@ -402,7 +402,7 @@ pub mod binary {
                         second_dest: Some(second_dest),
                         step: Some(step),
                         tag: Tag::TamMoveStepsDuringFormer,
-                    } => NormalMove::TamMoveStepsDuringFormer {
+                    } => Self::TamMoveStepsDuringFormer {
                         src,
                         first_dest,
                         second_dest,
@@ -414,7 +414,7 @@ pub mod binary {
                         second_dest: Some(second_dest),
                         step: None,
                         tag: Tag::TamMoveNoStep,
-                    } => NormalMove::TamMoveNoStep {
+                    } => Self::TamMoveNoStep {
                         src,
                         first_dest,
                         second_dest,
@@ -426,14 +426,14 @@ pub mod binary {
                         first_dest: None,
                         second_dest: Some(dest),
                         tag: Tag::NonTamMoveSrcDst,
-                    } => NormalMove::NonTamMoveSrcDst { src, dest },
+                    } => Self::NonTamMoveSrcDst { src, dest },
                     Bag {
                         src: Some(src),
                         step: Some(step),
                         first_dest: None,
                         second_dest: Some(dest),
                         tag: Tag::NonTamMoveSrcStepDstFinite,
-                    } => NormalMove::NonTamMoveSrcStepDstFinite { src, step, dest },
+                    } => Self::NonTamMoveSrcStepDstFinite { src, step, dest },
                     _ => return Err("Cannot interpret the input as a NormalMove"),
                 })
             }
@@ -546,7 +546,7 @@ pub mod binary {
             let first_dest = from_7bit_(first_dest)?;
             let second_dest = from_7bit_(second_dest)?;
 
-            Ok(Bag {
+            Ok(Self {
                 src,
                 step,
                 first_dest,

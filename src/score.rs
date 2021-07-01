@@ -22,17 +22,17 @@ impl Default for Scores {
 
 impl Scores {
     #[must_use]
-    pub fn new() -> Scores {
-        Scores { ia: 20, a: 20 }
+    pub const fn new() -> Self {
+        Self { ia: 20, a: 20 }
     }
 
     #[must_use]
-    pub fn ia(self) -> i32 {
+    pub const fn ia(self) -> i32 {
         self.ia
     }
 
     #[must_use]
-    pub fn a(self) -> i32 {
+    pub const fn a(self) -> i32 {
         self.a
     }
 
@@ -54,7 +54,7 @@ impl Scores {
         } else if new_ia_owner_s_score == 0 {
             Err(Victor(Some(absolute::Side::ASide)))
         } else {
-            Ok(Scores {
+            Ok(Self {
                 ia: new_ia_owner_s_score,
                 a: 40 - new_ia_owner_s_score,
             })

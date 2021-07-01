@@ -1,4 +1,4 @@
-#![warn(clippy::pedantic)]
+#![warn(clippy::pedantic, clippy::nursery)]
 #![allow(clippy::too_many_lines, clippy::missing_errors_doc)]
 
 #[macro_use]
@@ -30,17 +30,17 @@ pub mod probabilistic;
 
 impl Season {
     #[must_use]
-    pub fn next(self) -> Option<Self> {
+    pub const fn next(self) -> Option<Self> {
         match self {
-            Season::Iei2 => Some(Season::Xo1),
-            Season::Xo1 => Some(Season::Kat2),
-            Season::Kat2 => Some(Season::Iat1),
+            Season::Iei2 => Some(Self::Xo1),
+            Season::Xo1 => Some(Self::Kat2),
+            Season::Kat2 => Some(Self::Iat1),
             Season::Iat1 => None,
         }
     }
 
     #[must_use]
-    pub fn to_index(self) -> usize {
+    pub const fn to_index(self) -> usize {
         match self {
             Season::Iei2 => 0,
             Season::Xo1 => 1,
@@ -99,19 +99,19 @@ use probabilistic::Probabilistic;
 
 impl Rate {
     #[must_use]
-    pub fn next(self) -> Self {
+    pub const fn next(self) -> Self {
         match self {
-            Rate::X1 => Rate::X2,
-            Rate::X2 => Rate::X4,
-            Rate::X4 => Rate::X8,
-            Rate::X8 => Rate::X16,
-            Rate::X16 => Rate::X32,
-            Rate::X32 | Rate::X64 => Rate::X64,
+            Rate::X1 => Self::X2,
+            Rate::X2 => Self::X4,
+            Rate::X4 => Self::X8,
+            Rate::X8 => Self::X16,
+            Rate::X16 => Self::X32,
+            Rate::X32 | Rate::X64 => Self::X64,
         }
     }
 
     #[must_use]
-    pub fn num(self) -> i32 {
+    pub const fn num(self) -> i32 {
         match self {
             Rate::X1 => 1,
             Rate::X2 => 2,
@@ -460,7 +460,7 @@ pub fn apply_inf_after_step(
                 step,
                 planned_direction: _,
             }) => *src == msg.src && *step == msg.step,
-            _ => false,
+            message::PureMove::NormalMove(_) => false,
         })
         .collect();
 
@@ -700,8 +700,8 @@ pub enum Consequence {
 impl Config {
     /// Cerke Online α版での config 設定。
     #[must_use]
-    pub fn cerke_online_alpha() -> Config {
-        Config {
+    pub const fn cerke_online_alpha() -> Self {
+        Self {
             step_tam_is_a_hand: false,
             tam_itself_is_tam_hue: true,
             moving_tam_immediately_after_tam_has_moved: Consequence::Forbidden,
@@ -712,8 +712,8 @@ impl Config {
 
     /// 厳密官定での config 設定。
     #[must_use]
-    pub fn strict_y1_huap1() -> Config {
-        Config {
+    pub const fn strict_y1_huap1() -> Self {
+        Self {
             step_tam_is_a_hand: true,
             tam_itself_is_tam_hue: false,
             moving_tam_immediately_after_tam_has_moved: Consequence::Penalized {
@@ -752,7 +752,7 @@ pub fn resolve(state: &state::HandNotResolved, config: Config) -> state::HandRes
                     .expect("cannot fail, since the supplied list of piece should not exceed the limit on the number of piece");
 
                 // whether newly-acquired hand exists
-                if new_hands.difference(&old_hands).collect::<Vec<_>>().len() > 0 {
+                if new_hands.difference(&old_hands).next().is_some() {
                     Some(new_score)
                 } else {
                     None

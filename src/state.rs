@@ -139,11 +139,9 @@ impl state::A {
                     !matches!(
                         a,
                         super::message::PureMove::NormalMove(
-                            super::message::NormalMove::TamMoveNoStep { .. },
-                        ) | super::message::PureMove::NormalMove(
-                            super::message::NormalMove::TamMoveStepsDuringFormer { .. },
-                        ) | super::message::PureMove::NormalMove(
-                            super::message::NormalMove::TamMoveStepsDuringLatter { .. },
+                            super::message::NormalMove::TamMoveNoStep { .. }
+                                | super::message::NormalMove::TamMoveStepsDuringFormer { .. }
+                                | super::message::NormalMove::TamMoveStepsDuringLatter { .. },
                         )
                     )
                 })
@@ -158,17 +156,13 @@ impl state::A {
                         super::message::PureMove::NormalMove(
                             super::message::NormalMove::TamMoveNoStep {
                                 src, second_dest, ..
-                            },
-                        )
-                        | super::message::PureMove::NormalMove(
-                            super::message::NormalMove::TamMoveStepsDuringFormer {
+                            }
+                            | super::message::NormalMove::TamMoveStepsDuringFormer {
                                 src,
                                 second_dest,
                                 ..
-                            },
-                        )
-                        | super::message::PureMove::NormalMove(
-                            super::message::NormalMove::TamMoveStepsDuringLatter {
+                            }
+                            | super::message::NormalMove::TamMoveStepsDuringLatter {
                                 src,
                                 second_dest,
                                 ..
