@@ -92,7 +92,7 @@ impl<T> Prob<T> {
     /// Panics if float is outside the range.
     pub fn choose_by_uniform_random_variable(self, rand: f64) -> T {
         if !(0.0..1.0).contains(&rand) {
-            panic!("Expects a float within the range of 0 up to but not including 1")
+            panic!("Expects a float within the range of 0 up to but not including 1");
         }
         let mut threshold = 0.0;
         for (t, prob) in self.0 {

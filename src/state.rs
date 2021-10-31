@@ -237,7 +237,7 @@ impl state::C {
         let mut ans = vec![super::message::AfterHalfAcceptance { dest: None }];
 
         for dest in destinations {
-            ans.push(super::message::AfterHalfAcceptance { dest: Some(dest) })
+            ans.push(super::message::AfterHalfAcceptance { dest: Some(dest) });
         }
         ans
     }

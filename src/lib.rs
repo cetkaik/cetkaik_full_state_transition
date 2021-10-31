@@ -340,7 +340,7 @@ pub fn apply_normal_move(
             // したがって、 return Err ではなく unreachable としてある。
 
             if !hop1zuo1_candidates.contains(&message::PureMove::NormalMove(msg)) {
-                unreachable!("inconsistencies found between cetkaik_yhuap_move_candidates::PureMove::NonTamMoveFromHopZuo and cetkaik_full_state_transition::apply_nontam_move")
+                unreachable!("inconsistencies found between cetkaik_yhuap_move_candidates::PureMove::NonTamMoveFromHopZuo and cetkaik_full_state_transition::apply_nontam_move");
             }
 
             Ok(Probabilistic::Pure(state::HandNotResolved {
@@ -452,19 +452,17 @@ pub fn apply_inf_after_step(
 
     let (_hop1zuo1, candidates) = old_state.get_candidates(config);
 
-    let filtered: Vec<_> = candidates
+    if !candidates
         .into_iter()
-        .filter(|cand| match cand {
+        .any(|cand| match cand {
             message::PureMove::InfAfterStep(message::InfAfterStep {
                 src,
                 step,
                 planned_direction: _,
-            }) => *src == msg.src && *step == msg.step,
+            }) => src == msg.src && step == msg.step,
             message::PureMove::NormalMove(_) => false,
         })
-        .collect();
-
-    if filtered.is_empty() {
+    {
         return Err(
             "The provided InfAfterStep was rejected by the crate `cetkaik_yhuap_move_candidates`.",
         );
@@ -686,6 +684,9 @@ pub struct Config {
 
     /// 入水判定や踏越え判定に失敗したときに、撃皇が免除されるかどうか
     pub failure_to_complete_the_move_means_exempt_from_kut2_tam2: bool,
+
+    /// 減点行為が役でないルールで、役が成立して終季・再行の選択が発生せずに点が尽きることがありうるかどうか
+    pub game_can_end_without_tymok_taxot_because_of_negative_hand: bool,
 }
 
 /// Describes whether an action is forbidden, penalized, or allowed without any penalty.
@@ -707,6 +708,7 @@ impl Config {
             moving_tam_immediately_after_tam_has_moved: Consequence::Forbidden,
             tam_mun_mok: Consequence::Allowed,
             failure_to_complete_the_move_means_exempt_from_kut2_tam2: false,
+            game_can_end_without_tymok_taxot_because_of_negative_hand: true,
         }
     }
 
@@ -725,6 +727,7 @@ impl Config {
                 is_a_hand: true,
             },
             failure_to_complete_the_move_means_exempt_from_kut2_tam2: false,
+            game_can_end_without_tymok_taxot_because_of_negative_hand: false,
         }
     }
 }

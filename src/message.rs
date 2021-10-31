@@ -149,20 +149,19 @@ pub mod binary {
                 }
                 (Err(_), Err(_), Ok(after)) => {
                     hit += 1;
-                    assert_eq!(after.to_binary(), i)
+                    assert_eq!(after.to_binary(), i);
                 }
                 (Err(_), Ok(normal), Err(_)) => {
                     hit += 1;
-                    assert_eq!(normal.to_binary(), i)
+                    assert_eq!(normal.to_binary(), i);
                 }
                 (Ok(inf), Err(_), Err(_)) => {
                     hit += 1;
-                    assert_eq!(inf.to_binary(), i)
+                    assert_eq!(inf.to_binary(), i);
                 }
                 _ => panic!("Ambiguous mapping detected!!!!!"),
             }
         }
-        #[allow(clippy::cast_lossless)]
         println!(
             "hit: {}, miss: {}, hit ratio: {}",
             hit,
@@ -527,7 +526,7 @@ pub mod binary {
             let second_dest: u32 = to_7bit_(self.second_dest).into();
             let tag = self.tag as u8;
             if tag > 15 {
-                panic!("tag too large")
+                panic!("tag too large");
             }
             let tag: u32 = tag.into();
             src | (step << 7) | (first_dest << 14) | (second_dest << 21) | (tag << 28)
