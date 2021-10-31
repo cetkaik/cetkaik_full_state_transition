@@ -354,7 +354,6 @@ pub mod binary {
             .to_binary()
         }
         fn from_binary(v: u32) -> Result<Self, &'static str> {
-            use std::convert::TryInto;
             let tag: u8 = ((v & (15 << 28)) >> 28).try_into().unwrap();
             if tag == 0
             /* NormalMove::NonTamMoveFromHopZuo */
@@ -457,7 +456,6 @@ pub mod binary {
     }
 
     fn to_7bit(c: absolute::Coord) -> u8 {
-        use std::convert::TryInto;
         let [row, col] = cetkaik_core::perspective::to_relative_coord(
             c,
             cetkaik_core::perspective::Perspective::IaIsDownAndPointsUpward,
@@ -533,7 +531,6 @@ pub mod binary {
         }
 
         fn from_binary(v: u32) -> Result<Self, &'static str> {
-            use std::convert::TryInto;
             let src: u8 = (v & 127).try_into().unwrap();
             let step: u8 = ((v & (127 << 7)) >> 7).try_into().unwrap();
             let first_dest: u8 = ((v & (127 << 14)) >> 14).try_into().unwrap();
