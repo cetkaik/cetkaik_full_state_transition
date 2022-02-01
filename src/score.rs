@@ -10,7 +10,7 @@ pub struct Scores {
 /// Describes who won the game. If `Victor(None)`, the game is a tie.
 /// ／どちらが勝利したのかを表現する型。 `Victor(None)` であれば引き分け。
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct Victor(Option<cetkaik_core::absolute::Side>);
+pub struct Victor(pub Option<cetkaik_core::absolute::Side>);
 
 use cetkaik_core::absolute;
 
