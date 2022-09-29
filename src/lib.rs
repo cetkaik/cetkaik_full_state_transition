@@ -54,7 +54,7 @@ use cetkaik_core::absolute;
 
 /// Describes the state that the game is in.
 /// ／ゲームの状態を表現する型。状態遷移図は複雑なので、詳しくはプレゼン
-/// <https://docs.google.com/presentation/d/1IL8lelkw3oZif3QUQaKzGCPCLiBguM2kXjgOx9Cgetw/edit#slide=id.g788f78d7d6_0_0> または画像 <https://pbs.twimg.com/media/EqCkMhXUcAIynsd?format=png&name=900x900> を参照すること。
+/// <https://docs.google.com/presentation/d/1IL8lelkw3oZif3QUQaKzGCPCLiBguM2kXjgOx9Cgetw/edit#slide=id.g788f78d7d6_0_0> を参照すること。
 pub mod state;
 
 impl state::ExcitedState {
