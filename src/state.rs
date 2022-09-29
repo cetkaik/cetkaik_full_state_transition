@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 /// Normal state. ／一番普通の状態。
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct A {
+pub struct GroundState {
     pub f: absolute::Field,
     pub whose_turn: absolute::Side,
     pub season: Season,
@@ -12,7 +12,7 @@ pub struct A {
     pub tam_has_moved_previously: bool,
 }
 
-impl state::A {
+impl state::GroundState {
     /// ```
     /// use cetkaik_full_state_transition::message::InfAfterStep;
     /// use cetkaik_full_state_transition::*;
@@ -20,7 +20,7 @@ impl state::A {
     /// use cetkaik_core::absolute::Coord;
     /// use cetkaik_core::absolute::Row::*;
     /// use cetkaik_core::absolute::Column::*;
-    /// let ia_first = state::A {
+    /// let ia_first = state::GroundState {
     ///     whose_turn: absolute::Side::IASide,
     ///     scores: Scores::new(),
     ///     rate: Rate::X1,
@@ -179,14 +179,14 @@ impl state::A {
 }
 
 /// This is the state after the user has stepped over a piece and has cast the sticks so that the user can play to make an infinite movement from there. Seeing the sticks, the user is supposed to decide the final location and send it (`AfterHalfAcceptance`) to the server.
-/// ／踏越え後の無限移動をユーザーが行い、それに対して投げ棒で判定した後の状態。投げ棒を見て、ユーザーは最終的な移動場所をCに対しこれから送りつける。
+/// ／踏越え後の無限移動をユーザーが行い、それに対して投げ棒で判定した後の状態。投げ棒を見て、ユーザーは最終的な移動場所を `ExcitedState` に対しこれから送りつける。
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct C {
-    pub c: CWithoutCiurl,
+pub struct ExcitedState {
+    pub c: ExcitedStateWithoutCiurl,
     pub ciurl: i32,
 }
 
-impl state::C {
+impl state::ExcitedState {
     #[must_use]
     pub fn get_candidates(
         &self,
@@ -243,10 +243,10 @@ impl state::C {
     }
 }
 
-/// Same as `C`, except that the ciurl is not mentioned.
-/// ／`C` から投げ棒の値を除いたやつ。
+/// Same as `ExcitedState`, except that the ciurl is not mentioned.
+/// ／`ExcitedState` から投げ棒の値を除いたやつ。
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct CWithoutCiurl {
+pub struct ExcitedStateWithoutCiurl {
     pub f: absolute::Field,
     pub whose_turn: absolute::Side,
     pub flying_piece_src: absolute::Coord,
@@ -277,13 +277,13 @@ pub struct HandNotResolved {
 }
 
 /// Converting `HandNotResolved` into `HandResolved` with `resolve` tells you whether a new hand was created. If so, the `HandExists` variant is taken; if not, the `NeitherTymokNorTaxot` is taken.
-/// ／`HandNotResolved` を `resolve` でこの型に変換することによって、『役は発生しなかったぞ』であるのか、それとも『役は発生しており、したがって【再行ならこの `A` に至る】【終季ならこの `Probabilistic<state::A>` に至る（どちらが先手になるかは鯖のみぞ知るので `Probabilistic`）】』のどちらであるかを知ることができる。撃皇が役を構成するかどうかによってここの処理は変わってくるので、
+/// ／`HandNotResolved` を `resolve` でこの型に変換することによって、『役は発生しなかったぞ』であるのか、それとも『役は発生しており、したがって【再行ならこの `GroundState` に至る】【終季ならこの `Probabilistic<state::GroundState>` に至る（どちらが先手になるかは鯖のみぞ知るので `Probabilistic`）】』のどちらであるかを知ることができる。撃皇が役を構成するかどうかによってここの処理は変わってくるので、
 /// `resolve` は `Config` を要求する。
 #[derive(Clone, Debug)]
 pub enum HandResolved {
-    NeitherTymokNorTaxot(state::A),
+    NeitherTymokNorTaxot(state::GroundState),
     HandExists {
-        if_tymok: state::A,
+        if_tymok: state::GroundState,
         if_taxot: IfTaxot,
     },
 

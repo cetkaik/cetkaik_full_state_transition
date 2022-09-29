@@ -1,5 +1,5 @@
 #![warn(clippy::pedantic, clippy::nursery)]
-#![allow(clippy::too_many_lines, clippy::missing_errors_doc)]
+#![allow(clippy::too_many_lines, clippy::missing_errors_doc, clippy::large_enum_variant)]
 
 #[macro_use]
 extern crate enum_primitive;
@@ -32,20 +32,20 @@ impl Season {
     #[must_use]
     pub const fn next(self) -> Option<Self> {
         match self {
-            Season::Iei2 => Some(Self::Xo1),
-            Season::Xo1 => Some(Self::Kat2),
-            Season::Kat2 => Some(Self::Iat1),
-            Season::Iat1 => None,
+            Self::Iei2 => Some(Self::Xo1),
+            Self::Xo1 => Some(Self::Kat2),
+            Self::Kat2 => Some(Self::Iat1),
+            Self::Iat1 => None,
         }
     }
 
     #[must_use]
     pub const fn to_index(self) -> usize {
         match self {
-            Season::Iei2 => 0,
-            Season::Xo1 => 1,
-            Season::Kat2 => 2,
-            Season::Iat1 => 3,
+            Self::Iei2 => 0,
+            Self::Xo1 => 1,
+            Self::Kat2 => 2,
+            Self::Iat1 => 3,
         }
     }
 }
@@ -54,10 +54,10 @@ use cetkaik_core::absolute;
 
 /// Describes the state that the game is in.
 /// ／ゲームの状態を表現する型。状態遷移図は複雑なので、詳しくはプレゼン
-/// <https://docs.google.com/presentation/d/1IL8lelkw3oZif3QUQaKzGCPCLiBguM2kXjgOx9Cgetw/edit#slide=id.g788f78d7d6_0_0> または画像 <https://pbs.twimg.com/media/EqCkMhXUcAIynsd?format=png&name=900x900> を参照すること。
+/// <https://docs.google.com/presentation/d/1IL8lelkw3oZif3QUQaKzGCPCLiBguM2kXjgOx9Cgetw/edit#slide=id.g788f78d7d6_0_0> を参照すること。
 pub mod state;
 
-impl state::C {
+impl state::ExcitedState {
     #[must_use]
     pub fn piece_at_flying_piece_src(&self) -> absolute::Piece {
         *self
@@ -65,7 +65,7 @@ impl state::C {
             .f
             .board
             .get(&self.c.flying_piece_src)
-            .expect("Invalid `state::C`: at `flying_piece_src` there is no piece")
+            .expect("Invalid `state::ExcitedState`: at `flying_piece_src` there is no piece")
     }
 
     #[must_use]
@@ -75,7 +75,7 @@ impl state::C {
             .f
             .board
             .get(&self.c.flying_piece_step)
-            .expect("Invalid `state::C`: at `flying_piece_step` there is no piece")
+            .expect("Invalid `state::ExcitedState`: at `flying_piece_step` there is no piece")
     }
 }
 
@@ -101,31 +101,31 @@ impl Rate {
     #[must_use]
     pub const fn next(self) -> Self {
         match self {
-            Rate::X1 => Self::X2,
-            Rate::X2 => Self::X4,
-            Rate::X4 => Self::X8,
-            Rate::X8 => Self::X16,
-            Rate::X16 => Self::X32,
-            Rate::X32 | Rate::X64 => Self::X64,
+            Self::X1 => Self::X2,
+            Self::X2 => Self::X4,
+            Self::X4 => Self::X8,
+            Self::X8 => Self::X16,
+            Self::X16 => Self::X32,
+            Self::X32 | Self::X64 => Self::X64,
         }
     }
 
     #[must_use]
     pub const fn num(self) -> i32 {
         match self {
-            Rate::X1 => 1,
-            Rate::X2 => 2,
-            Rate::X4 => 4,
-            Rate::X8 => 8,
-            Rate::X16 => 16,
-            Rate::X32 => 32,
-            Rate::X64 => 64,
+            Self::X1 => 1,
+            Self::X2 => 2,
+            Self::X4 => 4,
+            Self::X8 => 8,
+            Self::X16 => 16,
+            Self::X32 => 32,
+            Self::X64 => 64,
         }
     }
 }
 
 fn apply_tam_move(
-    old_state: &state::A,
+    old_state: &state::GroundState,
     src: absolute::Coord,
     first_dest: absolute::Coord,
     second_dest: absolute::Coord,
@@ -200,7 +200,7 @@ fn apply_tam_move(
 }
 
 fn apply_nontam_move(
-    old_state: &state::A,
+    old_state: &state::GroundState,
     src: absolute::Coord,
     dest: absolute::Coord,
     step: Option<absolute::Coord>,
@@ -289,7 +289,7 @@ fn apply_nontam_move(
 /// When completely stuck, call this function to end the game.
 /// ／完全に手詰まりのときは、この関数を呼び出すことで即時決着がつく。
 pub fn no_move_possible_at_all(
-    old_state: &state::A,
+    old_state: &state::GroundState,
     config: Config,
 ) -> Result<state::HandResolved, &'static str> {
     let (hop1zuo1_candidates, candidates) = old_state.get_candidates(config);
@@ -302,9 +302,9 @@ pub fn no_move_possible_at_all(
     }
 }
 
-/// `NormalMove` sends `A` to `Probabilistic<HandNotResolved>`
+/// `NormalMove` sends `GroundState` to `Probabilistic<HandNotResolved>`
 pub fn apply_normal_move(
-    old_state: &state::A,
+    old_state: &state::GroundState,
     msg: message::NormalMove,
     config: Config,
 ) -> Result<Probabilistic<state::HandNotResolved>, &'static str> {
@@ -420,7 +420,7 @@ pub fn apply_normal_move(
 /// use cetkaik_core::absolute::Coord;
 /// use cetkaik_core::absolute::Row::*;
 /// use cetkaik_core::absolute::Column::*;
-/// let ia_first = state::A {
+/// let ia_first = state::GroundState {
 ///     whose_turn: absolute::Side::IASide,
 ///     scores: Scores::new(),
 ///     rate: Rate::X1,
@@ -436,12 +436,12 @@ pub fn apply_normal_move(
 /// apply_inf_after_step(&ia_first, inf_after_step, Config::cerke_online_alpha()).unwrap();
 /// ```
 
-/// `InfAfterStep` sends `A` to `Probabilistic<C>`
+/// `InfAfterStep` sends `GroundState` to `Probabilistic<ExcitedState>`
 pub fn apply_inf_after_step(
-    old_state: &state::A,
+    old_state: &state::GroundState,
     msg: message::InfAfterStep,
     config: Config,
-) -> Result<Probabilistic<state::C>, &'static str> {
+) -> Result<Probabilistic<state::ExcitedState>, &'static str> {
     if !old_state.f.board.contains_key(&msg.src) {
         return Err("In InfAfterStep, `src` is not occupied; illegal");
     }
@@ -468,7 +468,7 @@ pub fn apply_inf_after_step(
         );
     }
 
-    let c = state::CWithoutCiurl {
+    let c = state::ExcitedStateWithoutCiurl {
         f: old_state.f.clone(),
         whose_turn: old_state.whose_turn,
         flying_piece_src: msg.src,
@@ -479,27 +479,27 @@ pub fn apply_inf_after_step(
     };
 
     Ok(Probabilistic::Sticks {
-        s0: state::C {
+        s0: state::ExcitedState {
             c: c.clone(),
             ciurl: 0,
         },
-        s1: state::C {
+        s1: state::ExcitedState {
             c: c.clone(),
             ciurl: 1,
         },
-        s2: state::C {
+        s2: state::ExcitedState {
             c: c.clone(),
             ciurl: 2,
         },
-        s3: state::C {
+        s3: state::ExcitedState {
             c: c.clone(),
             ciurl: 3,
         },
-        s4: state::C {
+        s4: state::ExcitedState {
             c: c.clone(),
             ciurl: 4,
         },
-        s5: state::C { c, ciurl: 5 },
+        s5: state::ExcitedState { c, ciurl: 5 },
     })
 }
 
@@ -553,9 +553,9 @@ fn move_nontam_piece_from_src_to_dest_while_taking_opponent_piece_if_needed(
     Ok((new_board, None))
 }
 
-/// `AfterHalfAcceptance` sends `C` to `Probabilistic<HandNotResolved>`
+/// `AfterHalfAcceptance` sends `ExcitedState` to `Probabilistic<HandNotResolved>`
 pub fn apply_after_half_acceptance(
-    old_state: &state::C,
+    old_state: &state::ExcitedState,
     msg: message::AfterHalfAcceptance,
     config: Config,
 ) -> Result<Probabilistic<state::HandNotResolved>, &'static str> {
@@ -652,7 +652,7 @@ pub use score::Victor;
 /// ／もし終季が選ばれた際、次の季節に進むのか、それともゲームが終了するのかを保持するための補助的な型。
 #[derive(Clone, Debug)]
 pub enum IfTaxot {
-    NextSeason(Probabilistic<state::A>),
+    NextSeason(Probabilistic<state::GroundState>),
 
     VictoriousSide(Victor),
 }
@@ -799,7 +799,7 @@ pub fn resolve(state: &state::HandNotResolved, config: Config) -> state::HandRes
             .edit(state.tam2tysak2_raw_penalty, state.whose_turn, state.rate)
         {
             Ok(new_scores) => {
-                return state::HandResolved::NeitherTymokNorTaxot(state::A {
+                return state::HandResolved::NeitherTymokNorTaxot(state::GroundState {
                     f: state.f.clone(),
                     whose_turn: !state.whose_turn, /* hand the turn to the next person */
                     season: state.season,
@@ -836,7 +836,7 @@ pub fn resolve(state: &state::HandNotResolved, config: Config) -> state::HandRes
     };
 
     state::HandResolved::HandExists {
-        if_tymok: state::A {
+        if_tymok: state::GroundState {
             f: state.f.clone(),
             whose_turn: !state.whose_turn, /* hand the turn to the next person */
             season: state.season,
@@ -852,12 +852,12 @@ pub fn resolve(state: &state::HandNotResolved, config: Config) -> state::HandRes
 /// Start of the game, with the season in spring and each player holding 20 points
 /// ／ゲーム開始、季節は春で所持点は20
 #[must_use]
-pub fn initial_state() -> Probabilistic<state::A> {
+pub fn initial_state() -> Probabilistic<state::GroundState> {
     beginning_of_season(Season::Iei2, Scores::new())
 }
 
-fn beginning_of_season(season: Season, scores: Scores) -> Probabilistic<state::A> {
-    let ia_first = state::A {
+fn beginning_of_season(season: Season, scores: Scores) -> Probabilistic<state::GroundState> {
+    let ia_first = state::GroundState {
         whose_turn: absolute::Side::IASide,
         scores,
         rate: Rate::X1,
@@ -870,7 +870,7 @@ fn beginning_of_season(season: Season, scores: Scores) -> Probabilistic<state::A
         },
     };
     Probabilistic::WhoGoesFirst {
-        a_first: state::A {
+        a_first: state::GroundState {
             whose_turn: absolute::Side::ASide,
             ..ia_first.clone()
         },
