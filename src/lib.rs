@@ -1,5 +1,5 @@
 #![warn(clippy::pedantic, clippy::nursery)]
-#![allow(clippy::too_many_lines, clippy::missing_errors_doc)]
+#![allow(clippy::too_many_lines, clippy::missing_errors_doc, clippy::large_enum_variant)]
 
 #[macro_use]
 extern crate enum_primitive;
@@ -32,20 +32,20 @@ impl Season {
     #[must_use]
     pub const fn next(self) -> Option<Self> {
         match self {
-            Season::Iei2 => Some(Self::Xo1),
-            Season::Xo1 => Some(Self::Kat2),
-            Season::Kat2 => Some(Self::Iat1),
-            Season::Iat1 => None,
+            Self::Iei2 => Some(Self::Xo1),
+            Self::Xo1 => Some(Self::Kat2),
+            Self::Kat2 => Some(Self::Iat1),
+            Self::Iat1 => None,
         }
     }
 
     #[must_use]
     pub const fn to_index(self) -> usize {
         match self {
-            Season::Iei2 => 0,
-            Season::Xo1 => 1,
-            Season::Kat2 => 2,
-            Season::Iat1 => 3,
+            Self::Iei2 => 0,
+            Self::Xo1 => 1,
+            Self::Kat2 => 2,
+            Self::Iat1 => 3,
         }
     }
 }
@@ -101,25 +101,25 @@ impl Rate {
     #[must_use]
     pub const fn next(self) -> Self {
         match self {
-            Rate::X1 => Self::X2,
-            Rate::X2 => Self::X4,
-            Rate::X4 => Self::X8,
-            Rate::X8 => Self::X16,
-            Rate::X16 => Self::X32,
-            Rate::X32 | Rate::X64 => Self::X64,
+            Self::X1 => Self::X2,
+            Self::X2 => Self::X4,
+            Self::X4 => Self::X8,
+            Self::X8 => Self::X16,
+            Self::X16 => Self::X32,
+            Self::X32 | Self::X64 => Self::X64,
         }
     }
 
     #[must_use]
     pub const fn num(self) -> i32 {
         match self {
-            Rate::X1 => 1,
-            Rate::X2 => 2,
-            Rate::X4 => 4,
-            Rate::X8 => 8,
-            Rate::X16 => 16,
-            Rate::X32 => 32,
-            Rate::X64 => 64,
+            Self::X1 => 1,
+            Self::X2 => 2,
+            Self::X4 => 4,
+            Self::X8 => 8,
+            Self::X16 => 16,
+            Self::X32 => 32,
+            Self::X64 => 64,
         }
     }
 }

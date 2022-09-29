@@ -179,7 +179,7 @@ impl state::GroundState {
 }
 
 /// This is the state after the user has stepped over a piece and has cast the sticks so that the user can play to make an infinite movement from there. Seeing the sticks, the user is supposed to decide the final location and send it (`AfterHalfAcceptance`) to the server.
-/// ／踏越え後の無限移動をユーザーが行い、それに対して投げ棒で判定した後の状態。投げ棒を見て、ユーザーは最終的な移動場所を ExcitedState に対しこれから送りつける。
+/// ／踏越え後の無限移動をユーザーが行い、それに対して投げ棒で判定した後の状態。投げ棒を見て、ユーザーは最終的な移動場所を `ExcitedState` に対しこれから送りつける。
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ExcitedState {
     pub c: ExcitedStateWithoutCiurl,

@@ -288,21 +288,21 @@ pub mod binary {
     impl Binary for NormalMove {
         fn to_binary(&self) -> u32 {
             match *self {
-                NormalMove::NonTamMoveSrcDst { src, dest } => Bag {
+                Self::NonTamMoveSrcDst { src, dest } => Bag {
                     src: Some(src),
                     step: None,
                     first_dest: None,
                     second_dest: Some(dest),
                     tag: Tag::NonTamMoveSrcDst,
                 },
-                NormalMove::NonTamMoveSrcStepDstFinite { src, step, dest } => Bag {
+                Self::NonTamMoveSrcStepDstFinite { src, step, dest } => Bag {
                     src: Some(src),
                     step: Some(step),
                     first_dest: None,
                     second_dest: Some(dest),
                     tag: Tag::NonTamMoveSrcStepDstFinite,
                 },
-                NormalMove::NonTamMoveFromHopZuo { color, prof, dest } => {
+                Self::NonTamMoveFromHopZuo { color, prof, dest } => {
                     use cetkaik_core::Color::{Huok2, Kok1};
 
                     #[allow(clippy::cast_sign_loss)]
@@ -315,7 +315,7 @@ pub mod binary {
                     let tag = 0;
                     return prof | (color << 8) | (dest << 21) | (tag << 28);
                 }
-                NormalMove::TamMoveNoStep {
+                Self::TamMoveNoStep {
                     src,
                     first_dest,
                     second_dest,
@@ -326,7 +326,7 @@ pub mod binary {
                     step: None,
                     tag: Tag::TamMoveNoStep,
                 },
-                NormalMove::TamMoveStepsDuringFormer {
+                Self::TamMoveStepsDuringFormer {
                     src,
                     first_dest,
                     second_dest,
@@ -338,7 +338,7 @@ pub mod binary {
                     step: Some(step),
                     tag: Tag::TamMoveStepsDuringFormer,
                 },
-                NormalMove::TamMoveStepsDuringLatter {
+                Self::TamMoveStepsDuringLatter {
                     src,
                     first_dest,
                     second_dest,
@@ -523,9 +523,7 @@ pub mod binary {
             let first_dest: u32 = to_7bit_(self.first_dest).into();
             let second_dest: u32 = to_7bit_(self.second_dest).into();
             let tag = self.tag as u8;
-            if tag > 15 {
-                panic!("tag too large");
-            }
+            assert!(tag <= 15, "tag too large");
             let tag: u32 = tag.into();
             src | (step << 7) | (first_dest << 14) | (second_dest << 21) | (tag << 28)
         }
