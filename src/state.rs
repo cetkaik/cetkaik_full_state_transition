@@ -1,4 +1,5 @@
 use super::{absolute, state, IfTaxot, Rate, Scores, Season};
+use cetkaik_core::absolute::same_direction;
 use serde::{Deserialize, Serialize};
 
 /// Normal state. ／一番普通の状態。
@@ -172,6 +173,66 @@ impl state::GroundState {
     }
 }
 
+#[test]
+fn test_get_candidates() {
+    use crate::message::AfterHalfAcceptance;
+    use absolute::{
+        Column::Z,
+        Coord,
+        Row::{AI, E, I, O, U},
+    };
+    use cetkaik_core::Profession;
+    assert_eq!(
+        ExcitedState {
+            c: ExcitedStateWithoutCiurl {
+                f: absolute::Field {
+                    a_side_hop1zuo1: vec![],
+                    ia_side_hop1zuo1: vec![],
+                    board: std::collections::HashMap::from([
+                        (
+                            absolute::Coord(AI, Z),
+                            absolute::Piece::NonTam2Piece {
+                                color: cetkaik_core::Color::Huok2,
+                                prof: Profession::Nuak1,
+                                side: absolute::Side::IASide
+                            }
+                        ),
+                        (
+                            absolute::Coord(O, Z),
+                            absolute::Piece::NonTam2Piece {
+                                color: cetkaik_core::Color::Huok2,
+                                prof: Profession::Kauk2,
+                                side: absolute::Side::IASide
+                            }
+                        )
+                    ])
+                },
+                whose_turn: absolute::Side::IASide,
+                flying_piece_src: absolute::Coord(AI, Z),
+                flying_piece_step: absolute::Coord(O, Z),
+                flying_piece_planned_direction: absolute::Coord(I, Z),
+                season: Season::Iei2,
+                scores: crate::Scores::default(),
+                rate: Rate::X1,
+            },
+            ciurl: 3
+        }
+        .get_candidates(crate::Config::cerke_online_alpha()),
+        vec![
+            AfterHalfAcceptance { dest: None },
+            AfterHalfAcceptance {
+                dest: Some(Coord(U, Z))
+            },
+            AfterHalfAcceptance {
+                dest: Some(Coord(I, Z))
+            },
+            AfterHalfAcceptance {
+                dest: Some(Coord(E, Z))
+            }
+        ]
+    );
+}
+
 /// This is the state after the user has stepped over a piece and has cast the sticks so that the user can play to make an infinite movement from there. Seeing the sticks, the user is supposed to decide the final location and send it (`AfterHalfAcceptance`) to the server.
 /// ／踏越え後の無限移動をユーザーが行い、それに対して投げ棒で判定した後の状態。投げ棒を見て、ユーザーは最終的な移動場所を `ExcitedState` に対しこれから送りつける。
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -215,10 +276,17 @@ impl state::ExcitedState {
                 if src == self.c.flying_piece_src
                     && step == self.c.flying_piece_step
                     && self.ciurl >= cetkaik_core::absolute::distance(step, planned_direction)
-                /*
-                must also check whether the ciurl limit is not violated
-                投げ棒による距離限界についても検査が要る
-                */
+                    && match config.what_to_say_before_casting_sticks {
+                        None => true,
+                        Some(crate::Plan::ExactDestination) => {
+                            self.c.flying_piece_planned_direction == planned_direction
+                        }
+                        Some(crate::Plan::Direction) => same_direction(
+                            step,
+                            self.c.flying_piece_planned_direction,
+                            planned_direction,
+                        ),
+                    }
                 {
                     Some(planned_direction)
                 } else {
@@ -245,6 +313,7 @@ pub struct ExcitedStateWithoutCiurl {
     pub whose_turn: absolute::Side,
     pub flying_piece_src: absolute::Coord,
     pub flying_piece_step: absolute::Coord,
+    pub flying_piece_planned_direction: absolute::Coord,
     pub season: Season,
     pub scores: Scores,
     pub rate: Rate,

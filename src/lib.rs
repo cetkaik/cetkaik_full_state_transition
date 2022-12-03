@@ -473,6 +473,7 @@ pub fn apply_inf_after_step(
         whose_turn: old_state.whose_turn,
         flying_piece_src: msg.src,
         flying_piece_step: msg.step,
+        flying_piece_planned_direction: msg.planned_direction,
         season: old_state.season,
         scores: old_state.scores,
         rate: old_state.rate,
@@ -687,6 +688,15 @@ pub struct Config {
 
     /// 減点行為が役でないルールで、役が成立して終季・再行の選択が発生せずに点が尽きることがありうるかどうか
     pub game_can_end_without_tymok_taxot_because_of_negative_hand: bool,
+
+    /// 投げ棒を投げる前になにを表明しなければならないのか。None ならなにも表明しなくてよく、ExactDestination なら目的地を宣言し、Direction なら方向を宣言する
+    pub what_to_say_before_casting_sticks: Option<Plan>,
+}
+
+#[derive(Clone, Debug, Copy, PartialEq, Eq, Hash)]
+pub enum Plan {
+    Direction,
+    ExactDestination,
 }
 
 /// Describes whether an action is forbidden, penalized, or allowed without any penalty.
@@ -709,10 +719,11 @@ impl Config {
             tam_mun_mok: Consequence::Allowed,
             failure_to_complete_the_move_means_exempt_from_kut2_tam2: false,
             game_can_end_without_tymok_taxot_because_of_negative_hand: true,
+            what_to_say_before_casting_sticks: Some(Plan::Direction),
         }
     }
 
-    /// 厳密官定での config 設定。
+    /// 厳密で厳しく解釈した官定での config 設定。
     #[must_use]
     pub const fn strict_y1_huap1() -> Self {
         Self {
@@ -728,6 +739,7 @@ impl Config {
             },
             failure_to_complete_the_move_means_exempt_from_kut2_tam2: false,
             game_can_end_without_tymok_taxot_because_of_negative_hand: false,
+            what_to_say_before_casting_sticks: Some(Plan::ExactDestination),
         }
     }
 }
