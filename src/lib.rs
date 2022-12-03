@@ -1,5 +1,10 @@
 #![warn(clippy::pedantic)]
-#![allow(clippy::too_many_lines, clippy::missing_errors_doc, clippy::large_enum_variant, clippy::module_name_repetitions)]
+#![allow(
+    clippy::too_many_lines,
+    clippy::missing_errors_doc,
+    clippy::large_enum_variant,
+    clippy::module_name_repetitions
+)]
 
 #[macro_use]
 extern crate enum_primitive;
@@ -210,7 +215,9 @@ fn apply_nontam_move(
         previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
         previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
         kut2tam2_happened: !config.failure_to_complete_the_move_means_exempt_from_kut2_tam2
-            && step.map_or(false, |step| matches!(old_state.f.board.get(&step), Some(absolute::Piece::Tam2))),
+            && step.map_or(false, |step| {
+                matches!(old_state.f.board.get(&step), Some(absolute::Piece::Tam2))
+            }),
         rate: old_state.rate,
         i_have_moved_tam_in_this_turn: false,
         season: old_state.season,
@@ -254,7 +261,9 @@ fn apply_nontam_move(
     let success = state::HandNotResolved {
         previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
         previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
-        kut2tam2_happened: step.map_or(false, |step| matches!(old_state.f.board.get(&step), Some(absolute::Piece::Tam2))),
+        kut2tam2_happened: step.map_or(false, |step| {
+            matches!(old_state.f.board.get(&step), Some(absolute::Piece::Tam2))
+        }),
         rate: old_state.rate,
         i_have_moved_tam_in_this_turn: false,
         season: old_state.season,
@@ -446,17 +455,14 @@ pub fn apply_inf_after_step(
 
     let (_hop1zuo1, candidates) = old_state.get_candidates(config);
 
-    if !candidates
-        .into_iter()
-        .any(|cand| match cand {
-            message::PureMove::InfAfterStep(message::InfAfterStep {
-                src,
-                step,
-                planned_direction: _,
-            }) => src == msg.src && step == msg.step,
-            message::PureMove::NormalMove(_) => false,
-        })
-    {
+    if !candidates.into_iter().any(|cand| match cand {
+        message::PureMove::InfAfterStep(message::InfAfterStep {
+            src,
+            step,
+            planned_direction: _,
+        }) => src == msg.src && step == msg.step,
+        message::PureMove::NormalMove(_) => false,
+    }) {
         return Err(
             "The provided InfAfterStep was rejected by the crate `cetkaik_yhuap_move_candidates`.",
         );

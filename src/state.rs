@@ -134,38 +134,38 @@ impl state::GroundState {
             && config.moving_tam_immediately_after_tam_has_moved == super::Consequence::Forbidden
         {
             candidates.retain(|a| {
-                    !matches!(
-                        a,
-                        super::message::PureMove::NormalMove(
-                            super::message::NormalMove::TamMoveNoStep { .. }
-                                | super::message::NormalMove::TamMoveStepsDuringFormer { .. }
-                                | super::message::NormalMove::TamMoveStepsDuringLatter { .. },
-                        )
+                !matches!(
+                    a,
+                    super::message::PureMove::NormalMove(
+                        super::message::NormalMove::TamMoveNoStep { .. }
+                            | super::message::NormalMove::TamMoveStepsDuringFormer { .. }
+                            | super::message::NormalMove::TamMoveStepsDuringLatter { .. },
                     )
-                });
+                )
+            });
         }
 
         if config.tam_mun_mok == super::Consequence::Forbidden {
             candidates.retain(|a| {
-                    match a {
-                        super::message::PureMove::NormalMove(
-                            super::message::NormalMove::TamMoveNoStep {
-                                src, second_dest, ..
-                            }
-                            | super::message::NormalMove::TamMoveStepsDuringFormer {
-                                src,
-                                second_dest,
-                                ..
-                            }
-                            | super::message::NormalMove::TamMoveStepsDuringLatter {
-                                src,
-                                second_dest,
-                                ..
-                            },
-                        ) => src != second_dest, /* false when mun1mok1 */
-                        _ => true, /* always allow */
-                    }
-                });
+                match a {
+                    super::message::PureMove::NormalMove(
+                        super::message::NormalMove::TamMoveNoStep {
+                            src, second_dest, ..
+                        }
+                        | super::message::NormalMove::TamMoveStepsDuringFormer {
+                            src,
+                            second_dest,
+                            ..
+                        }
+                        | super::message::NormalMove::TamMoveStepsDuringLatter {
+                            src,
+                            second_dest,
+                            ..
+                        },
+                    ) => src != second_dest, /* false when mun1mok1 */
+                    _ => true, /* always allow */
+                }
+            });
         }
 
         (hop1zuo1_candidates, candidates)
