@@ -449,10 +449,7 @@ pub mod binary {
     }
 
     fn to_7bit_(c: Option<absolute::Coord>) -> u8 {
-        match c {
-            None => 127,
-            Some(c) => to_7bit(c),
-        }
+        c.map_or(127, to_7bit)
     }
 
     fn to_7bit(c: absolute::Coord) -> u8 {

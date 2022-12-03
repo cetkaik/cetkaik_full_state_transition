@@ -1,5 +1,5 @@
-#![warn(clippy::pedantic, clippy::nursery)]
-#![allow(clippy::too_many_lines, clippy::missing_errors_doc, clippy::large_enum_variant)]
+#![warn(clippy::pedantic)]
+#![allow(clippy::too_many_lines, clippy::missing_errors_doc, clippy::large_enum_variant, clippy::module_name_repetitions)]
 
 #[macro_use]
 extern crate enum_primitive;
@@ -210,10 +210,7 @@ fn apply_nontam_move(
         previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
         previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
         kut2tam2_happened: !config.failure_to_complete_the_move_means_exempt_from_kut2_tam2
-            && match step {
-                None => false,
-                Some(step) => matches!(old_state.f.board.get(&step), Some(absolute::Piece::Tam2)),
-            },
+            && step.map_or(false, |step| matches!(old_state.f.board.get(&step), Some(absolute::Piece::Tam2))),
         rate: old_state.rate,
         i_have_moved_tam_in_this_turn: false,
         season: old_state.season,
@@ -257,10 +254,7 @@ fn apply_nontam_move(
     let success = state::HandNotResolved {
         previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
         previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
-        kut2tam2_happened: match step {
-            None => false,
-            Some(step) => matches!(old_state.f.board.get(&step), Some(absolute::Piece::Tam2)),
-        },
+        kut2tam2_happened: step.map_or(false, |step| matches!(old_state.f.board.get(&step), Some(absolute::Piece::Tam2))),
         rate: old_state.rate,
         i_have_moved_tam_in_this_turn: false,
         season: old_state.season,

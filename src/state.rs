@@ -133,9 +133,7 @@ impl state::GroundState {
         if self.tam_has_moved_previously
             && config.moving_tam_immediately_after_tam_has_moved == super::Consequence::Forbidden
         {
-            candidates = candidates
-                .into_iter()
-                .filter(|a| {
+            candidates.retain(|a| {
                     !matches!(
                         a,
                         super::message::PureMove::NormalMove(
@@ -144,14 +142,11 @@ impl state::GroundState {
                                 | super::message::NormalMove::TamMoveStepsDuringLatter { .. },
                         )
                     )
-                })
-                .collect();
+                });
         }
 
         if config.tam_mun_mok == super::Consequence::Forbidden {
-            candidates = candidates
-                .into_iter()
-                .filter(|a| {
+            candidates.retain(|a| {
                     match a {
                         super::message::PureMove::NormalMove(
                             super::message::NormalMove::TamMoveNoStep {
@@ -170,8 +165,7 @@ impl state::GroundState {
                         ) => src != second_dest, /* false when mun1mok1 */
                         _ => true, /* always allow */
                     }
-                })
-                .collect();
+                });
         }
 
         (hop1zuo1_candidates, candidates)
