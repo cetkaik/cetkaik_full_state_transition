@@ -48,6 +48,12 @@ impl<T: Clone> Probabilistic<T> {
         prob.choose()
     }
 
+    #[must_use]
+    pub fn choose_by_uniform_random_variable(self, rand: f64) -> (T, Option<usize>)  {
+        let prob: Prob<_> = self.into();
+        prob.choose_by_uniform_random_variable(rand)
+    }
+
     /// # Panics
     /// Panics when called while ciurl exists.
     #[must_use]
