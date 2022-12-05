@@ -23,6 +23,26 @@ pub enum Probabilistic<T> {
 
 impl<T: Clone> Probabilistic<T> {
     #[must_use]
+    pub fn contains(&self, t: &T) -> bool
+    where
+        T: std::cmp::PartialEq,
+    {
+        match &self {
+            Probabilistic::Pure(pure) => pure == t,
+            Probabilistic::Water { failure, success } => failure == t || success == t,
+            Probabilistic::Sticks {
+                s0,
+                s1,
+                s2,
+                s3,
+                s4,
+                s5,
+            } => s0 == t || s1 == t || s2 == t || s3 == t || s4 == t || s5 == t,
+            Probabilistic::WhoGoesFirst { ia_first, a_first } => ia_first == t || a_first == t,
+        }
+    }
+
+    #[must_use]
     pub fn choose(self) -> (T, Option<usize>) {
         let prob: Prob<_> = self.into();
         prob.choose()
