@@ -21,6 +21,16 @@ impl state::GroundState {
     /// use cetkaik_core::absolute::Coord;
     /// use cetkaik_core::absolute::Row::*;
     /// use cetkaik_core::absolute::Column::*;
+    /// use std::collections::HashSet;
+    /// fn assert_eq_ignoring_order<T>(a: &[T], b: &[T])
+    /// where
+    ///     T: Eq + core::hash::Hash + std::fmt::Debug,
+    /// {
+    ///     let a: HashSet<_> = a.iter().collect();
+    ///     let b: HashSet<_> = b.iter().collect();
+    ///
+    ///     assert_eq!(a, b)
+    /// }
     /// let ia_first = state::GroundState {
     ///     whose_turn: absolute::Side::IASide,
     ///     scores: Scores::new(),
@@ -42,7 +52,7 @@ impl state::GroundState {
     ///             _ => None
     ///         }
     ///     ).collect();
-    /// assert_eq!(inf_after_step, vec![
+    /// assert_eq_ignoring_order(&inf_after_step, &vec![
     ///     InfAfterStep { src: Coord(IA, P), step: Coord(AU, P), planned_direction: Coord(IA, P) },
     ///     InfAfterStep { src: Coord(IA, K), step: Coord(AU, K), planned_direction: Coord(IA, K) },
     ///     InfAfterStep { src: Coord(AU, P), step: Coord(AU, M), planned_direction: Coord(AU, C) },
