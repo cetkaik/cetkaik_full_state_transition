@@ -108,7 +108,6 @@ impl state::GroundState {
         let hop1zuo1_candidates = from_hop1zuo1_candidates2(
             self.whose_turn,
             config.tam_itself_is_tam_hue,
-            self.tam_has_moved_previously,
             &self.f,
         )
         .into_iter()
@@ -120,7 +119,6 @@ impl state::GroundState {
                 allow_kut2tam2: true,
             },
             config.tam_itself_is_tam_hue,
-            self.tam_has_moved_previously,
             self.whose_turn,
             &self.f,
         )
@@ -249,7 +247,6 @@ impl state::ExcitedState {
                 allow_kut2tam2: true,
             },
             config.tam_itself_is_tam_hue,
-            false, /* it doesn't matter */
             self.c.whose_turn,
             &self.c.f,
         );
