@@ -101,27 +101,16 @@ impl state::GroundState {
         &self,
         config: super::Config,
     ) -> (Vec<super::message::PureMove>, Vec<super::message::PureMove>) {
-        use cetkaik_core::perspective::to_relative_field;
         use cetkaik_yhuap_move_candidates::{
-            from_hop1zuo1_candidates, not_from_hop1zuo1_candidates2, PureGameState,
+            from_hop1zuo1_candidates2, not_from_hop1zuo1_candidates2,
         };
 
-        // must set it so that self.whose_turn points downward
-        let perspective = match self.whose_turn {
-            absolute::Side::IASide => {
-                cetkaik_core::perspective::Perspective::IaIsUpAndPointsDownward
-            }
-            absolute::Side::ASide => {
-                cetkaik_core::perspective::Perspective::IaIsDownAndPointsUpward
-            }
-        };
-
-        let hop1zuo1_candidates = from_hop1zuo1_candidates(&PureGameState {
-            perspective,
-            opponent_has_just_moved_tam: self.tam_has_moved_previously,
-            tam_itself_is_tam_hue: config.tam_itself_is_tam_hue,
-            f: to_relative_field(self.f.clone(), perspective),
-        })
+        let hop1zuo1_candidates = from_hop1zuo1_candidates2(
+            self.whose_turn,
+            config.tam_itself_is_tam_hue,
+            self.tam_has_moved_previously,
+            &self.f,
+        )
         .into_iter()
         .map(super::message::PureMove::from)
         .collect::<Vec<_>>();
