@@ -103,7 +103,7 @@ impl state::GroundState {
         config: super::Config,
     ) -> (Vec<super::message::PureMove>, Vec<super::message::PureMove>) {
         use cetkaik_yhuap_move_candidates::{
-            from_hop1zuo1_candidates_vec, not_from_hop1zuo1_candidates2,
+            from_hop1zuo1_candidates_vec, not_from_hop1zuo1_candidates_vec,
         };
 
         let hop1zuo1_candidates =
@@ -112,7 +112,7 @@ impl state::GroundState {
                 .map(super::message::PureMove::from)
                 .collect::<Vec<_>>();
 
-        let mut candidates = not_from_hop1zuo1_candidates2(
+        let mut candidates = not_from_hop1zuo1_candidates_vec::<CetkaikCore>(
             &cetkaik_yhuap_move_candidates::Config {
                 allow_kut2tam2: true,
             },
@@ -240,14 +240,15 @@ impl state::ExcitedState {
         &self,
         config: super::Config,
     ) -> Vec<super::message::AfterHalfAcceptance> {
-        let candidates = cetkaik_yhuap_move_candidates::not_from_hop1zuo1_candidates2(
-            &cetkaik_yhuap_move_candidates::Config {
-                allow_kut2tam2: true,
-            },
-            config.tam_itself_is_tam_hue,
-            self.c.whose_turn,
-            &self.c.f,
-        );
+        let candidates =
+            cetkaik_yhuap_move_candidates::not_from_hop1zuo1_candidates_vec::<CetkaikCore>(
+                &cetkaik_yhuap_move_candidates::Config {
+                    allow_kut2tam2: true,
+                },
+                config.tam_itself_is_tam_hue,
+                self.c.whose_turn,
+                &self.c.f,
+            );
 
         let destinations = candidates.into_iter().filter_map(|cand| match cand {
             cetkaik_core::PureMove_::InfAfterStep {
