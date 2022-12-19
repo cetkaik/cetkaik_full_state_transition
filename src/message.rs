@@ -1,3 +1,5 @@
+use cetkaik_core::PureMove_;
+
 use super::absolute;
 
 #[derive(Eq, PartialEq, Clone, Debug)]
@@ -6,10 +8,10 @@ pub enum PureMove {
     NormalMove(NormalMove),
 }
 
-impl From<cetkaik_yhuap_move_candidates::PureMove> for PureMove {
-    fn from(candidate: cetkaik_yhuap_move_candidates::PureMove) -> Self {
+impl From<PureMove_<absolute::Coord>> for PureMove {
+    fn from(candidate: PureMove_<absolute::Coord>) -> Self {
         match candidate {
-            cetkaik_yhuap_move_candidates::PureMove::TamMoveNoStep {
+            PureMove_::TamMoveNoStep {
                 src,
                 first_dest,
                 second_dest,
@@ -19,7 +21,7 @@ impl From<cetkaik_yhuap_move_candidates::PureMove> for PureMove {
                 second_dest,
             }),
 
-            cetkaik_yhuap_move_candidates::PureMove::TamMoveStepsDuringFormer {
+            PureMove_::TamMoveStepsDuringFormer {
                 src,
                 step,
                 first_dest,
@@ -31,7 +33,7 @@ impl From<cetkaik_yhuap_move_candidates::PureMove> for PureMove {
                 second_dest,
             }),
 
-            cetkaik_yhuap_move_candidates::PureMove::TamMoveStepsDuringLatter {
+            PureMove_::TamMoveStepsDuringLatter {
                 src,
                 step,
                 first_dest,
@@ -43,14 +45,14 @@ impl From<cetkaik_yhuap_move_candidates::PureMove> for PureMove {
                 second_dest,
             }),
 
-            cetkaik_yhuap_move_candidates::PureMove::NonTamMoveSrcStepDstFinite {
+            PureMove_::NonTamMoveSrcStepDstFinite {
                 src,
                 step,
                 dest,
                 is_water_entry_ciurl: _,
             } => Self::NormalMove(NormalMove::NonTamMoveSrcStepDstFinite { src, step, dest }),
 
-            cetkaik_yhuap_move_candidates::PureMove::InfAfterStep {
+            PureMove_::InfAfterStep {
                 src,
                 step,
                 planned_direction,
@@ -60,11 +62,11 @@ impl From<cetkaik_yhuap_move_candidates::PureMove> for PureMove {
                 planned_direction,
             }),
 
-            cetkaik_yhuap_move_candidates::PureMove::NonTamMoveFromHopZuo { color, prof, dest } => {
+            PureMove_::NonTamMoveFromHopZuo { color, prof, dest } => {
                 Self::NormalMove(NormalMove::NonTamMoveFromHopZuo { color, prof, dest })
             }
 
-            cetkaik_yhuap_move_candidates::PureMove::NonTamMoveSrcDst {
+            PureMove_::NonTamMoveSrcDst {
                 src,
                 dest,
                 is_water_entry_ciurl: _,

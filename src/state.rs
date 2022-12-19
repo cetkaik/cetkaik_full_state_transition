@@ -1,5 +1,6 @@
 use super::{absolute, state, IfTaxot, Rate, Scores, Season};
 use cetkaik_core::absolute::same_direction;
+use cetkaik_yhuap_move_candidates::CetkaikCore;
 use serde::{Deserialize, Serialize};
 
 /// Normal state. ／一番普通の状態。
@@ -102,17 +103,14 @@ impl state::GroundState {
         config: super::Config,
     ) -> (Vec<super::message::PureMove>, Vec<super::message::PureMove>) {
         use cetkaik_yhuap_move_candidates::{
-            from_hop1zuo1_candidates2, not_from_hop1zuo1_candidates2,
+            from_hop1zuo1_candidates_vec, not_from_hop1zuo1_candidates2,
         };
 
-        let hop1zuo1_candidates = from_hop1zuo1_candidates2(
-            self.whose_turn,
-            config.tam_itself_is_tam_hue,
-            &self.f,
-        )
-        .into_iter()
-        .map(super::message::PureMove::from)
-        .collect::<Vec<_>>();
+        let hop1zuo1_candidates =
+            from_hop1zuo1_candidates_vec::<CetkaikCore>(self.whose_turn, &self.f)
+                .into_iter()
+                .map(super::message::PureMove::from)
+                .collect::<Vec<_>>();
 
         let mut candidates = not_from_hop1zuo1_candidates2(
             &cetkaik_yhuap_move_candidates::Config {
@@ -252,7 +250,7 @@ impl state::ExcitedState {
         );
 
         let destinations = candidates.into_iter().filter_map(|cand| match cand {
-            cetkaik_yhuap_move_candidates::PureMove::InfAfterStep {
+            cetkaik_core::PureMove_::InfAfterStep {
                 src,
                 step,
                 planned_direction,
