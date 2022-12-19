@@ -103,7 +103,7 @@ impl state::GroundState {
     ) -> (Vec<super::message::PureMove>, Vec<super::message::PureMove>) {
         use cetkaik_core::perspective::to_relative_field;
         use cetkaik_yhuap_move_candidates::{
-            from_hop1zuo1_candidates, not_from_hop1zuo1_candidates_, PureGameState,
+            from_hop1zuo1_candidates, not_from_hop1zuo1_candidates2, PureGameState,
         };
 
         // must set it so that self.whose_turn points downward
@@ -126,16 +126,14 @@ impl state::GroundState {
         .map(super::message::PureMove::from)
         .collect::<Vec<_>>();
 
-        let mut candidates = not_from_hop1zuo1_candidates_(
+        let mut candidates = not_from_hop1zuo1_candidates2(
             &cetkaik_yhuap_move_candidates::Config {
                 allow_kut2tam2: true,
             },
-            &PureGameState {
-                perspective,
-                opponent_has_just_moved_tam: self.tam_has_moved_previously,
-                tam_itself_is_tam_hue: config.tam_itself_is_tam_hue,
-                f: to_relative_field(self.f.clone(), perspective),
-            },
+            config.tam_itself_is_tam_hue,
+            self.tam_has_moved_previously,
+            self.whose_turn,
+            &self.f,
         )
         .into_iter()
         .map(super::message::PureMove::from)
@@ -257,24 +255,14 @@ impl state::ExcitedState {
         &self,
         config: super::Config,
     ) -> Vec<super::message::AfterHalfAcceptance> {
-        let perspective = match self.c.whose_turn {
-            absolute::Side::IASide => {
-                cetkaik_core::perspective::Perspective::IaIsUpAndPointsDownward
-            }
-            absolute::Side::ASide => {
-                cetkaik_core::perspective::Perspective::IaIsDownAndPointsUpward
-            }
-        };
-        let candidates = cetkaik_yhuap_move_candidates::not_from_hop1zuo1_candidates_(
+        let candidates = cetkaik_yhuap_move_candidates::not_from_hop1zuo1_candidates2(
             &cetkaik_yhuap_move_candidates::Config {
                 allow_kut2tam2: true,
             },
-            &cetkaik_yhuap_move_candidates::PureGameState {
-                perspective,
-                opponent_has_just_moved_tam: false, /* it doesn't matter */
-                tam_itself_is_tam_hue: config.tam_itself_is_tam_hue,
-                f: cetkaik_core::perspective::to_relative_field(self.c.f.clone(), perspective),
-            },
+            config.tam_itself_is_tam_hue,
+            false, /* it doesn't matter */
+            self.c.whose_turn,
+            &self.c.f,
         );
 
         let destinations = candidates.into_iter().filter_map(|cand| match cand {
