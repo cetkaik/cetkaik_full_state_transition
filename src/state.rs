@@ -101,9 +101,9 @@ impl state::GroundState {
         &self,
         config: super::Config,
     ) -> (Vec<super::message::PureMove>, Vec<super::message::PureMove>) {
+        use cetkaik_core::perspective::to_relative_field;
         use cetkaik_yhuap_move_candidates::{
-            from_hop1zuo1_candidates, not_from_hop1zuo1_candidates_, to_relative_field,
-            PureGameState,
+            from_hop1zuo1_candidates, not_from_hop1zuo1_candidates_, PureGameState,
         };
 
         // must set it so that self.whose_turn points downward
@@ -273,7 +273,7 @@ impl state::ExcitedState {
                 perspective,
                 opponent_has_just_moved_tam: false, /* it doesn't matter */
                 tam_itself_is_tam_hue: config.tam_itself_is_tam_hue,
-                f: cetkaik_yhuap_move_candidates::to_relative_field(self.c.f.clone(), perspective),
+                f: cetkaik_core::perspective::to_relative_field(self.c.f.clone(), perspective),
             },
         );
 
