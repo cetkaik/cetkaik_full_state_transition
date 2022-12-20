@@ -6,9 +6,6 @@
     clippy::module_name_repetitions
 )]
 
-#[macro_use]
-extern crate enum_primitive;
-
 use serde::{Deserialize, Serialize};
 
 /// Represents the season. Currently, only four-season games are supported.
