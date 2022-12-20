@@ -431,35 +431,35 @@ pub fn apply_normal_move(
 /// ```
 
 /// `InfAfterStep` sends `GroundState` to `Probabilistic<ExcitedState>`
-pub fn apply_inf_after_step(
-    old_state: &state::GroundState,
-    msg: message::InfAfterStep,
+pub fn apply_inf_after_step<T: CetkaikRepresentation + Clone>(
+    old_state: &state::GroundState_<T>,
+    msg: message::InfAfterStep_<T::AbsoluteCoord>,
     config: Config,
-) -> Result<Probabilistic<state::ExcitedState>, &'static str> {
-    if !old_state.f.board.contains_key(&msg.src) {
+) -> Result<Probabilistic<state::ExcitedState_<T>>, &'static str> {
+    if T::absolute_get(T::as_board_absolute(&old_state.f), msg.src).is_none() {
         return Err("In InfAfterStep, `src` is not occupied; illegal");
     }
 
-    if !old_state.f.board.contains_key(&msg.step) {
+    if T::absolute_get(T::as_board_absolute(&old_state.f), msg.step).is_none() {
         return Err("In InfAfterStep, `step` is not occupied; illegal");
     }
 
     let (_hop1zuo1, candidates) = old_state.get_candidates(config);
 
     if !candidates.into_iter().any(|cand| match cand {
-        message::PureMove::InfAfterStep(message::InfAfterStep {
+        message::PureMove__::InfAfterStep(message::InfAfterStep_ {
             src,
             step,
             planned_direction: _,
         }) => src == msg.src && step == msg.step,
-        message::PureMove::NormalMove(_) => false,
+        message::PureMove__::NormalMove(_) => false,
     }) {
         return Err(
             "The provided InfAfterStep was rejected by the crate `cetkaik_yhuap_move_candidates`.",
         );
     }
 
-    let c = state::ExcitedStateWithoutCiurl {
+    let c: state::ExcitedStateWithoutCiurl_<T> = state::ExcitedStateWithoutCiurl_ {
         f: old_state.f.clone(),
         whose_turn: old_state.whose_turn,
         flying_piece_src: msg.src,
@@ -471,27 +471,27 @@ pub fn apply_inf_after_step(
     };
 
     Ok(Probabilistic::Sticks {
-        s0: state::ExcitedState {
+        s0: state::ExcitedState_ {
             c: c.clone(),
             ciurl: 0,
         },
-        s1: state::ExcitedState {
+        s1: state::ExcitedState_ {
             c: c.clone(),
             ciurl: 1,
         },
-        s2: state::ExcitedState {
+        s2: state::ExcitedState_ {
             c: c.clone(),
             ciurl: 2,
         },
-        s3: state::ExcitedState {
+        s3: state::ExcitedState_ {
             c: c.clone(),
             ciurl: 3,
         },
-        s4: state::ExcitedState {
+        s4: state::ExcitedState_ {
             c: c.clone(),
             ciurl: 4,
         },
-        s5: state::ExcitedState { c, ciurl: 5 },
+        s5: state::ExcitedState_ { c, ciurl: 5 },
     })
 }
 
