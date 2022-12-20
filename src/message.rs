@@ -75,59 +75,65 @@ impl From<PureMove_<absolute::Coord>> for PureMove {
     }
 }
 
+pub type InfAfterStep = InfAfterStep_<absolute::Coord>;
+
 /// Describes the moves that require a stepping-over cast
 /// (that is, when after stepping over a piece you plan to make a movement with infinite range).
 /// ／踏越え判定が必要になるタイプの移動を表現する型。
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Hash)]
-pub struct InfAfterStep {
-    pub src: absolute::Coord,
-    pub step: absolute::Coord,
-    pub planned_direction: absolute::Coord,
+pub struct InfAfterStep_<T> {
+    pub src: T,
+    pub step: T,
+    pub planned_direction: T,
 }
+
+pub type AfterHalfAcceptance = AfterHalfAcceptance_<absolute::Coord>;
 
 /// Describes the decision after the stepping-over cast was sent from the server
 /// ／踏越え判定の結果がサーバーから送られた後にユーザーが送ってくる決断を表現する型。
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Hash)]
-pub struct AfterHalfAcceptance {
+pub struct AfterHalfAcceptance_<T> {
     /// None: hands over the turn to the opponent
     /// None は（投げ棒の出目が気に入らなかったために）パスして相手に手番を渡すことを表す
-    pub dest: Option<absolute::Coord>,
+    pub dest: Option<T>,
 }
+
+pub type NormalMove = NormalMove_<absolute::Coord>;
 
 /// Describes all the moves except those that require a stepping-over cast
 /// (that is, when after stepping over a piece you plan to make a movement with infinite range).
 /// ／踏越え判定が不要なタイプの移動を表現する型。
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Hash)]
-pub enum NormalMove {
+pub enum NormalMove_<T> {
     NonTamMoveSrcDst {
-        src: absolute::Coord,
-        dest: absolute::Coord,
+        src: T,
+        dest: T,
     },
     NonTamMoveSrcStepDstFinite {
-        src: absolute::Coord,
-        step: absolute::Coord,
-        dest: absolute::Coord,
+        src: T,
+        step: T,
+        dest: T,
     },
     NonTamMoveFromHopZuo {
         color: cetkaik_core::Color,
         prof: cetkaik_core::Profession,
-        dest: absolute::Coord,
+        dest: T,
     },
     TamMoveNoStep {
-        src: absolute::Coord,
-        first_dest: absolute::Coord,
-        second_dest: absolute::Coord,
+        src: T,
+        first_dest: T,
+        second_dest: T,
     },
     TamMoveStepsDuringFormer {
-        src: absolute::Coord,
-        step: absolute::Coord,
-        first_dest: absolute::Coord,
-        second_dest: absolute::Coord,
+        src: T,
+        step: T,
+        first_dest: T,
+        second_dest: T,
     },
     TamMoveStepsDuringLatter {
-        src: absolute::Coord,
-        step: absolute::Coord,
-        first_dest: absolute::Coord,
-        second_dest: absolute::Coord,
+        src: T,
+        step: T,
+        first_dest: T,
+        second_dest: T,
     },
 }
