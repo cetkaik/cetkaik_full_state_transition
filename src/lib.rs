@@ -6,9 +6,8 @@
     clippy::module_name_repetitions
 )]
 
-#[macro_use]
-extern crate enum_primitive;
-
+use cetkaik_yhuap_move_candidates::CetkaikCore;
+use cetkaik_yhuap_move_candidates::CetkaikRepresentation;
 use serde::{Deserialize, Serialize};
 
 /// Represents the season. Currently, only four-season games are supported.
@@ -649,11 +648,13 @@ pub fn apply_after_half_acceptance(
 
 pub use score::Victor;
 
+pub type IfTaxot = IfTaxot_<CetkaikCore>;
+
 /// An auxiliary type that represents whether we should terminate the game or proceed to the next season if the player chose to end the current season.
 /// ／もし終季が選ばれた際、次の季節に進むのか、それともゲームが終了するのかを保持するための補助的な型。
 #[derive(Clone, Debug)]
-pub enum IfTaxot {
-    NextSeason(Probabilistic<state::GroundState>),
+pub enum IfTaxot_<T: CetkaikRepresentation> {
+    NextSeason(Probabilistic<state::GroundState_<T>>),
 
     VictoriousSide(Victor),
 }

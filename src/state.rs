@@ -1,20 +1,23 @@
 use super::{absolute, state, IfTaxot, Rate, Scores, Season};
-use cetkaik_core::absolute::same_direction;
-use cetkaik_yhuap_move_candidates::CetkaikCore;
+use cetkaik_yhuap_move_candidates::{CetkaikCore, CetkaikRepresentation};
 use serde::{Deserialize, Serialize};
+
+type PM<T> = super::message::PureMove__<<T as CetkaikRepresentation>::AbsoluteCoord>;
+
+pub type GroundState = GroundState_<CetkaikCore>;
 
 /// Normal state. ／一番普通の状態。
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct GroundState {
-    pub f: absolute::Field,
-    pub whose_turn: absolute::Side,
+pub struct GroundState_<T: CetkaikRepresentation> {
+    pub f: T::AbsoluteField,
+    pub whose_turn: T::AbsoluteSide,
     pub season: Season,
     pub scores: Scores,
     pub rate: Rate,
     pub tam_has_moved_previously: bool,
 }
 
-impl state::GroundState {
+impl<T: CetkaikRepresentation> state::GroundState_<T> {
     /// ```
     /// use cetkaik_full_state_transition::message::InfAfterStep;
     /// use cetkaik_full_state_transition::*;
@@ -98,21 +101,17 @@ impl state::GroundState {
     /// ])
     /// ```
     #[must_use]
-    pub fn get_candidates(
-        &self,
-        config: super::Config,
-    ) -> (Vec<super::message::PureMove>, Vec<super::message::PureMove>) {
+    pub fn get_candidates(&self, config: super::Config) -> (Vec<PM<T>>, Vec<PM<T>>) {
         use cetkaik_yhuap_move_candidates::{
             from_hop1zuo1_candidates_vec, not_from_hop1zuo1_candidates_vec,
         };
 
-        let hop1zuo1_candidates =
-            from_hop1zuo1_candidates_vec::<CetkaikCore>(self.whose_turn, &self.f)
-                .into_iter()
-                .map(super::message::PureMove::from)
-                .collect::<Vec<_>>();
+        let hop1zuo1_candidates = from_hop1zuo1_candidates_vec::<T>(self.whose_turn, &self.f)
+            .into_iter()
+            .map(super::message::PureMove__::from)
+            .collect::<Vec<_>>();
 
-        let mut candidates = not_from_hop1zuo1_candidates_vec::<CetkaikCore>(
+        let mut candidates = not_from_hop1zuo1_candidates_vec::<T>(
             &cetkaik_yhuap_move_candidates::Config {
                 allow_kut2tam2: true,
             },
@@ -121,7 +120,7 @@ impl state::GroundState {
             &self.f,
         )
         .into_iter()
-        .map(super::message::PureMove::from)
+        .map(super::message::PureMove__::from)
         .collect::<Vec<_>>();
 
         if self.tam_has_moved_previously
@@ -130,10 +129,10 @@ impl state::GroundState {
             candidates.retain(|a| {
                 !matches!(
                     a,
-                    super::message::PureMove::NormalMove(
-                        super::message::NormalMove::TamMoveNoStep { .. }
-                            | super::message::NormalMove::TamMoveStepsDuringFormer { .. }
-                            | super::message::NormalMove::TamMoveStepsDuringLatter { .. },
+                    super::message::PureMove__::NormalMove(
+                        super::message::NormalMove_::TamMoveNoStep { .. }
+                            | super::message::NormalMove_::TamMoveStepsDuringFormer { .. }
+                            | super::message::NormalMove_::TamMoveStepsDuringLatter { .. },
                     )
                 )
             });
@@ -142,16 +141,16 @@ impl state::GroundState {
         if config.tam_mun_mok == super::Consequence::Forbidden {
             candidates.retain(|a| {
                 match a {
-                    super::message::PureMove::NormalMove(
-                        super::message::NormalMove::TamMoveNoStep {
+                    super::message::PureMove__::NormalMove(
+                        super::message::NormalMove_::TamMoveNoStep {
                             src, second_dest, ..
                         }
-                        | super::message::NormalMove::TamMoveStepsDuringFormer {
+                        | super::message::NormalMove_::TamMoveStepsDuringFormer {
                             src,
                             second_dest,
                             ..
                         }
-                        | super::message::NormalMove::TamMoveStepsDuringLatter {
+                        | super::message::NormalMove_::TamMoveStepsDuringLatter {
                             src,
                             second_dest,
                             ..
@@ -226,29 +225,30 @@ fn test_get_candidates() {
     );
 }
 
+pub type ExcitedState = ExcitedState_<CetkaikCore>;
+
 /// This is the state after the user has stepped over a piece and has cast the sticks so that the user can play to make an infinite movement from there. Seeing the sticks, the user is supposed to decide the final location and send it (`AfterHalfAcceptance`) to the server.
 /// ／踏越え後の無限移動をユーザーが行い、それに対して投げ棒で判定した後の状態。投げ棒を見て、ユーザーは最終的な移動場所を `ExcitedState` に対しこれから送りつける。
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ExcitedState {
-    pub c: ExcitedStateWithoutCiurl,
+#[derive(Clone, Debug)]
+pub struct ExcitedState_<T: CetkaikRepresentation> {
+    pub c: ExcitedStateWithoutCiurl_<T>,
     pub ciurl: i32,
 }
 
-impl state::ExcitedState {
+impl<T: CetkaikRepresentation> state::ExcitedState_<T> {
     #[must_use]
     pub fn get_candidates(
         &self,
         config: super::Config,
-    ) -> Vec<super::message::AfterHalfAcceptance> {
-        let candidates =
-            cetkaik_yhuap_move_candidates::not_from_hop1zuo1_candidates_vec::<CetkaikCore>(
-                &cetkaik_yhuap_move_candidates::Config {
-                    allow_kut2tam2: true,
-                },
-                config.tam_itself_is_tam_hue,
-                self.c.whose_turn,
-                &self.c.f,
-            );
+    ) -> Vec<super::message::AfterHalfAcceptance_<T::AbsoluteCoord>> {
+        let candidates = cetkaik_yhuap_move_candidates::not_from_hop1zuo1_candidates_vec::<T>(
+            &cetkaik_yhuap_move_candidates::Config {
+                allow_kut2tam2: true,
+            },
+            config.tam_itself_is_tam_hue,
+            self.c.whose_turn,
+            &self.c.f,
+        );
 
         let destinations = candidates.into_iter().filter_map(|cand| match cand {
             cetkaik_core::PureMove_::InfAfterStep {
@@ -258,13 +258,13 @@ impl state::ExcitedState {
             } => {
                 if src == self.c.flying_piece_src
                     && step == self.c.flying_piece_step
-                    && self.ciurl >= cetkaik_core::absolute::distance(step, planned_direction)
+                    && self.ciurl >= T::absolute_distance(step, planned_direction)
                     && match config.what_to_say_before_casting_sticks {
                         None => true,
                         Some(crate::Plan::ExactDestination) => {
                             self.c.flying_piece_planned_direction == planned_direction
                         }
-                        Some(crate::Plan::Direction) => same_direction(
+                        Some(crate::Plan::Direction) => T::absolute_same_direction(
                             step,
                             self.c.flying_piece_planned_direction,
                             planned_direction,
@@ -279,35 +279,39 @@ impl state::ExcitedState {
             _ => None,
         });
 
-        let mut ans = vec![super::message::AfterHalfAcceptance { dest: None }];
+        let mut ans = vec![super::message::AfterHalfAcceptance_ { dest: None }];
 
         for dest in destinations {
-            ans.push(super::message::AfterHalfAcceptance { dest: Some(dest) });
+            ans.push(super::message::AfterHalfAcceptance_ { dest: Some(dest) });
         }
         ans
     }
 }
 
+pub type ExcitedStateWithoutCiurl = ExcitedStateWithoutCiurl_<CetkaikCore>;
+
 /// Same as `ExcitedState`, except that the ciurl is not mentioned.
 /// ／`ExcitedState` から投げ棒の値を除いたやつ。
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ExcitedStateWithoutCiurl {
-    pub f: absolute::Field,
-    pub whose_turn: absolute::Side,
-    pub flying_piece_src: absolute::Coord,
-    pub flying_piece_step: absolute::Coord,
-    pub flying_piece_planned_direction: absolute::Coord,
+pub struct ExcitedStateWithoutCiurl_<T: CetkaikRepresentation> {
+    pub f: T::AbsoluteField,
+    pub whose_turn: T::AbsoluteSide,
+    pub flying_piece_src: T::AbsoluteCoord,
+    pub flying_piece_step: T::AbsoluteCoord,
+    pub flying_piece_planned_direction: T::AbsoluteCoord,
     pub season: Season,
     pub scores: Scores,
     pub rate: Rate,
 }
 
+pub type HandNotResolved = HandNotResolved_<CetkaikCore>;
+
 /// The water entry cast (if any) is now over, and thus the piece movement is now fully completed. However, I still haven't resolved whether a hand exists. If so, I must ask the user to choose whether to end the season or not.
 /// ／入水判定も終わり、駒を完全に動かし終わった。しかしながら、「役が存在していて再行・終季をユーザーに訊く」を発生させるか否かをまだ解決していない。そんな状態。
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct HandNotResolved {
-    pub f: absolute::Field,
-    pub whose_turn: absolute::Side,
+pub struct HandNotResolved_<T: CetkaikRepresentation> {
+    pub f: T::AbsoluteField,
+    pub whose_turn: T::AbsoluteSide,
     pub season: Season,
     pub scores: Scores,
     pub rate: Rate,
@@ -322,14 +326,16 @@ pub struct HandNotResolved {
     pub tam2tysak2_will_trigger_taxottymok: bool,
 }
 
+pub type HandResolved = HandResolved_<CetkaikCore>;
+
 /// Converting `HandNotResolved` into `HandResolved` with `resolve` tells you whether a new hand was created. If so, the `HandExists` variant is taken; if not, the `NeitherTymokNorTaxot` is taken.
 /// ／`HandNotResolved` を `resolve` でこの型に変換することによって、『役は発生しなかったぞ』であるのか、それとも『役は発生しており、したがって【再行ならこの `GroundState` に至る】【終季ならこの `Probabilistic<state::GroundState>` に至る（どちらが先手になるかは鯖のみぞ知るので `Probabilistic`）】』のどちらであるかを知ることができる。撃皇が役を構成するかどうかによってここの処理は変わってくるので、
 /// `resolve` は `Config` を要求する。
 #[derive(Clone, Debug)]
-pub enum HandResolved {
-    NeitherTymokNorTaxot(state::GroundState),
+pub enum HandResolved_<T: CetkaikRepresentation> {
+    NeitherTymokNorTaxot(state::GroundState_<T>),
     HandExists {
-        if_tymok: state::GroundState,
+        if_tymok: state::GroundState_<T>,
         if_taxot: IfTaxot,
     },
 
