@@ -1,13 +1,15 @@
 use super::{absolute, state, IfTaxot, Rate, Scores, Season};
 use cetkaik_core::absolute::same_direction;
-use cetkaik_yhuap_move_candidates::CetkaikCore;
+use cetkaik_yhuap_move_candidates::{CetkaikCore, CetkaikRepresentation};
 use serde::{Deserialize, Serialize};
+
+pub type GroundState = GroundState_<CetkaikCore>;
 
 /// Normal state. ／一番普通の状態。
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct GroundState {
-    pub f: absolute::Field,
-    pub whose_turn: absolute::Side,
+pub struct GroundState_<T: CetkaikRepresentation> {
+    pub f: T::AbsoluteField,
+    pub whose_turn: T::AbsoluteSide,
     pub season: Season,
     pub scores: Scores,
     pub rate: Rate,
@@ -288,26 +290,30 @@ impl state::ExcitedState {
     }
 }
 
+pub type ExcitedStateWithoutCiurl = ExcitedStateWithoutCiurl_<CetkaikCore>;
+
 /// Same as `ExcitedState`, except that the ciurl is not mentioned.
 /// ／`ExcitedState` から投げ棒の値を除いたやつ。
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ExcitedStateWithoutCiurl {
-    pub f: absolute::Field,
-    pub whose_turn: absolute::Side,
-    pub flying_piece_src: absolute::Coord,
-    pub flying_piece_step: absolute::Coord,
-    pub flying_piece_planned_direction: absolute::Coord,
+pub struct ExcitedStateWithoutCiurl_<T: CetkaikRepresentation> {
+    pub f: T::AbsoluteField,
+    pub whose_turn: T::AbsoluteSide,
+    pub flying_piece_src: T::AbsoluteCoord,
+    pub flying_piece_step: T::AbsoluteCoord,
+    pub flying_piece_planned_direction: T::AbsoluteCoord,
     pub season: Season,
     pub scores: Scores,
     pub rate: Rate,
 }
 
+pub type HandNotResolved = HandNotResolved_<CetkaikCore>;
+
 /// The water entry cast (if any) is now over, and thus the piece movement is now fully completed. However, I still haven't resolved whether a hand exists. If so, I must ask the user to choose whether to end the season or not.
 /// ／入水判定も終わり、駒を完全に動かし終わった。しかしながら、「役が存在していて再行・終季をユーザーに訊く」を発生させるか否かをまだ解決していない。そんな状態。
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct HandNotResolved {
-    pub f: absolute::Field,
-    pub whose_turn: absolute::Side,
+pub struct HandNotResolved_<T: CetkaikRepresentation> {
+    pub f: T::AbsoluteField,
+    pub whose_turn: T::AbsoluteSide,
     pub season: Season,
     pub scores: Scores,
     pub rate: Rate,
@@ -322,14 +328,16 @@ pub struct HandNotResolved {
     pub tam2tysak2_will_trigger_taxottymok: bool,
 }
 
+pub type HandResolved = HandResolved_<CetkaikCore>;
+
 /// Converting `HandNotResolved` into `HandResolved` with `resolve` tells you whether a new hand was created. If so, the `HandExists` variant is taken; if not, the `NeitherTymokNorTaxot` is taken.
 /// ／`HandNotResolved` を `resolve` でこの型に変換することによって、『役は発生しなかったぞ』であるのか、それとも『役は発生しており、したがって【再行ならこの `GroundState` に至る】【終季ならこの `Probabilistic<state::GroundState>` に至る（どちらが先手になるかは鯖のみぞ知るので `Probabilistic`）】』のどちらであるかを知ることができる。撃皇が役を構成するかどうかによってここの処理は変わってくるので、
 /// `resolve` は `Config` を要求する。
 #[derive(Clone, Debug)]
-pub enum HandResolved {
-    NeitherTymokNorTaxot(state::GroundState),
+pub enum HandResolved_<T: CetkaikRepresentation> {
+    NeitherTymokNorTaxot(state::GroundState_<T>),
     HandExists {
-        if_tymok: state::GroundState,
+        if_tymok: state::GroundState_<T>,
         if_taxot: IfTaxot,
     },
 
