@@ -3,6 +3,8 @@ use cetkaik_core::absolute::same_direction;
 use cetkaik_yhuap_move_candidates::{CetkaikCore, CetkaikRepresentation};
 use serde::{Deserialize, Serialize};
 
+type PM<T> = super::message::PureMove__<<T as CetkaikRepresentation>::AbsoluteCoord>;
+
 pub type GroundState = GroundState_<CetkaikCore>;
 
 /// Normal state. ／一番普通の状態。
@@ -16,7 +18,7 @@ pub struct GroundState_<T: CetkaikRepresentation> {
     pub tam_has_moved_previously: bool,
 }
 
-impl state::GroundState {
+impl<T: CetkaikRepresentation> state::GroundState_<T> {
     /// ```
     /// use cetkaik_full_state_transition::message::InfAfterStep;
     /// use cetkaik_full_state_transition::*;
@@ -100,21 +102,17 @@ impl state::GroundState {
     /// ])
     /// ```
     #[must_use]
-    pub fn get_candidates(
-        &self,
-        config: super::Config,
-    ) -> (Vec<super::message::PureMove>, Vec<super::message::PureMove>) {
+    pub fn get_candidates(&self, config: super::Config) -> (Vec<PM<T>>, Vec<PM<T>>) {
         use cetkaik_yhuap_move_candidates::{
             from_hop1zuo1_candidates_vec, not_from_hop1zuo1_candidates_vec,
         };
 
-        let hop1zuo1_candidates =
-            from_hop1zuo1_candidates_vec::<CetkaikCore>(self.whose_turn, &self.f)
-                .into_iter()
-                .map(super::message::PureMove::from)
-                .collect::<Vec<_>>();
+        let hop1zuo1_candidates = from_hop1zuo1_candidates_vec::<T>(self.whose_turn, &self.f)
+            .into_iter()
+            .map(super::message::PureMove__::from)
+            .collect::<Vec<_>>();
 
-        let mut candidates = not_from_hop1zuo1_candidates_vec::<CetkaikCore>(
+        let mut candidates = not_from_hop1zuo1_candidates_vec::<T>(
             &cetkaik_yhuap_move_candidates::Config {
                 allow_kut2tam2: true,
             },
@@ -123,7 +121,7 @@ impl state::GroundState {
             &self.f,
         )
         .into_iter()
-        .map(super::message::PureMove::from)
+        .map(super::message::PureMove__::from)
         .collect::<Vec<_>>();
 
         if self.tam_has_moved_previously
@@ -132,10 +130,10 @@ impl state::GroundState {
             candidates.retain(|a| {
                 !matches!(
                     a,
-                    super::message::PureMove::NormalMove(
-                        super::message::NormalMove::TamMoveNoStep { .. }
-                            | super::message::NormalMove::TamMoveStepsDuringFormer { .. }
-                            | super::message::NormalMove::TamMoveStepsDuringLatter { .. },
+                    super::message::PureMove__::NormalMove(
+                        super::message::NormalMove_::TamMoveNoStep { .. }
+                            | super::message::NormalMove_::TamMoveStepsDuringFormer { .. }
+                            | super::message::NormalMove_::TamMoveStepsDuringLatter { .. },
                     )
                 )
             });
@@ -144,16 +142,16 @@ impl state::GroundState {
         if config.tam_mun_mok == super::Consequence::Forbidden {
             candidates.retain(|a| {
                 match a {
-                    super::message::PureMove::NormalMove(
-                        super::message::NormalMove::TamMoveNoStep {
+                    super::message::PureMove__::NormalMove(
+                        super::message::NormalMove_::TamMoveNoStep {
                             src, second_dest, ..
                         }
-                        | super::message::NormalMove::TamMoveStepsDuringFormer {
+                        | super::message::NormalMove_::TamMoveStepsDuringFormer {
                             src,
                             second_dest,
                             ..
                         }
-                        | super::message::NormalMove::TamMoveStepsDuringLatter {
+                        | super::message::NormalMove_::TamMoveStepsDuringLatter {
                             src,
                             second_dest,
                             ..
