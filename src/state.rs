@@ -1,4 +1,4 @@
-use super::{absolute, state, IfTaxot, Rate, Scores, Season};
+use super::{state, IfTaxot, Rate, Scores, Season};
 use cetkaik_yhuap_move_candidates::{CetkaikCore, CetkaikRepresentation};
 use serde::{Deserialize, Serialize};
 
@@ -168,6 +168,7 @@ impl<T: CetkaikRepresentation> state::GroundState_<T> {
 #[test]
 fn test_get_candidates() {
     use crate::message::AfterHalfAcceptance;
+    use super::absolute;
     use absolute::{
         Column::Z,
         Coord,
@@ -316,8 +317,8 @@ pub struct HandNotResolved_<T: CetkaikRepresentation> {
     pub scores: Scores,
     pub rate: Rate,
     pub i_have_moved_tam_in_this_turn: bool,
-    pub previous_a_side_hop1zuo1: Vec<absolute::NonTam2Piece>,
-    pub previous_ia_side_hop1zuo1: Vec<absolute::NonTam2Piece>,
+    pub previous_a_side_hop1zuo1: Vec<cetkaik_core::ColorAndProf>,
+    pub previous_ia_side_hop1zuo1: Vec<cetkaik_core::ColorAndProf>,
     pub kut2tam2_happened: bool,
     pub tam2tysak2_raw_penalty: i32,
 

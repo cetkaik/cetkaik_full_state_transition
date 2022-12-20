@@ -10,9 +10,9 @@ repository = "https://github.com/sozysozbot/cetkaik_full_state_transition"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cetkaik_calculate_hand = "0.4.0"
-cetkaik_core = "0.4.2"
-cetkaik_yhuap_move_candidates = "0.6.2"
+cetkaik_calculate_hand = "0.5.0"
+cetkaik_core = "0.5.1"
+cetkaik_yhuap_move_candidates = { path = "../cetkaik_yhuap_move_candidates" }
 readonly = "0.2.0"
 maplit = "1.0.2"
 enum_primitive = "0.1.1"
