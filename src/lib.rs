@@ -32,6 +32,27 @@ pub mod message;
 /// ／状態の確率分布を表現する。サーバー側で投げ棒を乱択することで、どの状態に至るかが決まる。
 pub mod probabilistic;
 
+fn field_is_empty_at<T: CetkaikRepresentation>(
+    f: &T::AbsoluteField,
+    coord: T::AbsoluteCoord,
+) -> bool {
+    T::absolute_get(T::as_board_absolute(f), coord).is_none()
+}
+
+fn field_is_occupied_at<T: CetkaikRepresentation>(
+    f: &T::AbsoluteField,
+    coord: T::AbsoluteCoord,
+) -> bool {
+    T::absolute_get(T::as_board_absolute(f), coord).is_some()
+}
+
+fn piece_on_field_at<T: CetkaikRepresentation>(
+    f: &T::AbsoluteField,
+    coord: T::AbsoluteCoord,
+) -> Option<T::AbsolutePiece> {
+    T::absolute_get(T::as_board_absolute(f), coord)
+}
+
 impl Season {
     #[must_use]
     pub const fn next(self) -> Option<Self> {
@@ -64,13 +85,13 @@ pub mod state;
 impl<T: CetkaikRepresentation> state::ExcitedState_<T> {
     #[must_use]
     pub fn piece_at_flying_piece_src(&self) -> T::AbsolutePiece {
-        T::absolute_get(T::as_board_absolute(&self.c.f), self.c.flying_piece_src)
+        piece_on_field_at::<T>(&self.c.f, self.c.flying_piece_src)
             .expect("Invalid `state::ExcitedState`: at `flying_piece_src` there is no piece")
     }
 
     #[must_use]
     pub fn piece_at_flying_piece_step(&self) -> T::AbsolutePiece {
-        T::absolute_get(T::as_board_absolute(&self.c.f), self.c.flying_piece_step)
+        piece_on_field_at::<T>(&self.c.f, self.c.flying_piece_step)
             .expect("Invalid `state::ExcitedState`: at `flying_piece_step` there is no piece")
     }
 }
@@ -121,13 +142,13 @@ impl Rate {
 }
 
 fn apply_tam_move(
-    old_state: &state::GroundState,
-    src: absolute::Coord,
-    first_dest: absolute::Coord,
-    second_dest: absolute::Coord,
-    step: Option<absolute::Coord>,
+    old_state: &state::GroundState_<CetkaikCore>,
+    src: <CetkaikCore as CetkaikRepresentation>::AbsoluteCoord,
+    first_dest: <CetkaikCore as CetkaikRepresentation>::AbsoluteCoord,
+    second_dest: <CetkaikCore as CetkaikRepresentation>::AbsoluteCoord,
+    step: Option<<CetkaikCore as CetkaikRepresentation>::AbsoluteCoord>,
     config: Config,
-) -> Result<Probabilistic<state::HandNotResolved>, &'static str> {
+) -> Result<Probabilistic<state::HandNotResolved_<CetkaikCore>>, &'static str> {
     let (penalty1, is_a_hand1) = if old_state.tam_has_moved_previously {
         match config.moving_tam_immediately_after_tam_has_moved {
                 Consequence::Allowed => (0, false),
@@ -161,25 +182,35 @@ fn apply_tam_move(
         return Err("expected tam2 but found a non-tam2 piece");
     }
 
-    if new_field.board.contains_key(&first_dest) {
+    if field_is_occupied_at::<CetkaikCore>(&new_field, first_dest) {
         return Err("the first destination is already occupied");
     }
 
     if let Some(st) = step {
-        if !new_field.board.contains_key(&st) {
+        if field_is_empty_at::<CetkaikCore>(&new_field, st) {
             return Err("the stepping square is empty");
         }
     }
 
-    if new_field.board.contains_key(&second_dest) {
+    if field_is_occupied_at::<CetkaikCore>(&new_field, second_dest) {
         return Err("the second destination is already occupied");
     }
 
     new_field.board.insert(second_dest, absolute::Piece::Tam2);
 
-    Ok(Probabilistic::Pure(state::HandNotResolved {
-        previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
-        previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
+    Ok(Probabilistic::Pure(state::HandNotResolved_ {
+        previous_a_side_hop1zuo1: <CetkaikCore as CetkaikRepresentation>::hop1zuo1_of(
+            <CetkaikCore as CetkaikRepresentation>::from_cetkaikcore_absolute_side(
+                cetkaik_core::absolute::Side::ASide,
+            ),
+            &old_state.f,
+        ),
+        previous_ia_side_hop1zuo1: <CetkaikCore as CetkaikRepresentation>::hop1zuo1_of(
+            <CetkaikCore as CetkaikRepresentation>::from_cetkaikcore_absolute_side(
+                cetkaik_core::absolute::Side::IASide,
+            ),
+            &old_state.f,
+        ),
 
         // When Tam2 moves, Tam2 is never stepped on (this assumption fails with the two-tam rule, which is not yet supported.)
         // 皇の動きで撃皇が発生することはない（二皇の場合は修正が必要）
@@ -436,11 +467,11 @@ pub fn apply_inf_after_step<T: CetkaikRepresentation + Clone>(
     msg: message::InfAfterStep_<T::AbsoluteCoord>,
     config: Config,
 ) -> Result<Probabilistic<state::ExcitedState_<T>>, &'static str> {
-    if T::absolute_get(T::as_board_absolute(&old_state.f), msg.src).is_none() {
+    if field_is_empty_at::<T>(&old_state.f, msg.src) {
         return Err("In InfAfterStep, `src` is not occupied; illegal");
     }
 
-    if T::absolute_get(T::as_board_absolute(&old_state.f), msg.step).is_none() {
+    if field_is_empty_at::<T>(&old_state.f, msg.step) {
         return Err("In InfAfterStep, `step` is not occupied; illegal");
     }
 
