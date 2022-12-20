@@ -2,20 +2,22 @@ use cetkaik_core::PureMove_;
 
 use super::absolute;
 
+pub type PureMove = PureMove__<absolute::Coord>;
+
 #[derive(Eq, PartialEq, Clone, Debug)]
-pub enum PureMove {
-    InfAfterStep(InfAfterStep),
-    NormalMove(NormalMove),
+pub enum PureMove__<T> {
+    InfAfterStep(InfAfterStep_<T>),
+    NormalMove(NormalMove_<T>),
 }
 
-impl From<PureMove_<absolute::Coord>> for PureMove {
-    fn from(candidate: PureMove_<absolute::Coord>) -> Self {
+impl<T> From<PureMove_<T>> for PureMove__<T> {
+    fn from(candidate: PureMove_<T>) -> Self {
         match candidate {
             PureMove_::TamMoveNoStep {
                 src,
                 first_dest,
                 second_dest,
-            } => Self::NormalMove(NormalMove::TamMoveNoStep {
+            } => Self::NormalMove(NormalMove_::TamMoveNoStep {
                 src,
                 first_dest,
                 second_dest,
@@ -26,7 +28,7 @@ impl From<PureMove_<absolute::Coord>> for PureMove {
                 step,
                 first_dest,
                 second_dest,
-            } => Self::NormalMove(NormalMove::TamMoveStepsDuringFormer {
+            } => Self::NormalMove(NormalMove_::TamMoveStepsDuringFormer {
                 src,
                 step,
                 first_dest,
@@ -38,7 +40,7 @@ impl From<PureMove_<absolute::Coord>> for PureMove {
                 step,
                 first_dest,
                 second_dest,
-            } => Self::NormalMove(NormalMove::TamMoveStepsDuringLatter {
+            } => Self::NormalMove(NormalMove_::TamMoveStepsDuringLatter {
                 src,
                 step,
                 first_dest,
@@ -50,27 +52,27 @@ impl From<PureMove_<absolute::Coord>> for PureMove {
                 step,
                 dest,
                 is_water_entry_ciurl: _,
-            } => Self::NormalMove(NormalMove::NonTamMoveSrcStepDstFinite { src, step, dest }),
+            } => Self::NormalMove(NormalMove_::NonTamMoveSrcStepDstFinite { src, step, dest }),
 
             PureMove_::InfAfterStep {
                 src,
                 step,
                 planned_direction,
-            } => Self::InfAfterStep(InfAfterStep {
+            } => Self::InfAfterStep(InfAfterStep_ {
                 src,
                 step,
                 planned_direction,
             }),
 
             PureMove_::NonTamMoveFromHopZuo { color, prof, dest } => {
-                Self::NormalMove(NormalMove::NonTamMoveFromHopZuo { color, prof, dest })
+                Self::NormalMove(NormalMove_::NonTamMoveFromHopZuo { color, prof, dest })
             }
 
             PureMove_::NonTamMoveSrcDst {
                 src,
                 dest,
                 is_water_entry_ciurl: _,
-            } => Self::NormalMove(NormalMove::NonTamMoveSrcDst { src, dest }),
+            } => Self::NormalMove(NormalMove_::NonTamMoveSrcDst { src, dest }),
         }
     }
 }
