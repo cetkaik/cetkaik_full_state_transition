@@ -10,12 +10,16 @@ repository = "https://github.com/sozysozbot/cetkaik_full_state_transition"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cetkaik_calculate_hand = "0.5.0"
-cetkaik_core = "0.5.6"
-cetkaik_yhuap_move_candidates = "0.7.5"
+cetkaik_calculate_hand = { path = "../cetkaik_calculate_hand" }
+cetkaik_fundamental = { path = "../cetkaik_fundamental" }
+cetkaik_interface = { path = "../cetkaik_interface" }
+cetkaik_yhuap_move_candidates = { path = "../cetkaik_yhuap_move_candidates" }
 readonly = "0.2.0"
 maplit = "1.0.2"
 enum_primitive = "0.1.1"
 num = "0.4.0"
 serde = { version = "1.0.148", features = ["derive"] }
 rand = "0.8.4"
+
+[dev-dependencies]
+cetkaik_naive_representation = { path = "../cetkaik_naive_representation" }

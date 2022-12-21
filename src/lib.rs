@@ -6,10 +6,12 @@
     clippy::module_name_repetitions
 )]
 
-use cetkaik_core::IsAbsoluteField;
-use cetkaik_core::IsBoard;
-use cetkaik_core::IsField;
-use cetkaik_yhuap_move_candidates::CetkaikRepresentation;
+use cetkaik_fundamental::AbsoluteSide;
+use cetkaik_fundamental::AbsoluteSide::{ASide, IASide};
+use cetkaik_interface::CetkaikRepresentation;
+use cetkaik_interface::IsAbsoluteField;
+use cetkaik_interface::IsBoard;
+use cetkaik_interface::IsField;
 use serde::{Deserialize, Serialize};
 
 /// Represents the season. Currently, only four-season games are supported.
@@ -76,8 +78,6 @@ impl Season {
         }
     }
 }
-
-use cetkaik_core::absolute;
 
 /// Describes the state that the game is in.
 /// ／ゲームの状態を表現する型。状態遷移図は複雑なので、詳しくはプレゼン
@@ -200,14 +200,8 @@ fn apply_tam_move<T: CetkaikRepresentation>(
     T::as_board_mut_absolute(&mut new_field).put(second_dest, Some(T::absolute_tam2()));
 
     Ok(Probabilistic::Pure(state::HandNotResolved_ {
-        previous_a_side_hop1zuo1: T::hop1zuo1_of(
-            T::from_cetkaikcore_absolute_side(cetkaik_core::absolute::Side::ASide),
-            &old_state.f,
-        ),
-        previous_ia_side_hop1zuo1: T::hop1zuo1_of(
-            T::from_cetkaikcore_absolute_side(cetkaik_core::absolute::Side::IASide),
-            &old_state.f,
-        ),
+        previous_a_side_hop1zuo1: T::hop1zuo1_of(ASide, &old_state.f),
+        previous_ia_side_hop1zuo1: T::hop1zuo1_of(IASide, &old_state.f),
 
         // When Tam2 moves, Tam2 is never stepped on (this assumption fails with the two-tam rule, which is not yet supported.)
         // 皇の動きで撃皇が発生することはない（二皇の場合は修正が必要）
@@ -231,14 +225,8 @@ fn apply_nontam_move<T: CetkaikRepresentation>(
     config: Config,
 ) -> Result<Probabilistic<state::HandNotResolved_<T>>, &'static str> {
     let nothing_happened = state::HandNotResolved_ {
-        previous_a_side_hop1zuo1: T::hop1zuo1_of(
-            T::from_cetkaikcore_absolute_side(cetkaik_core::absolute::Side::ASide),
-            &old_state.f,
-        ),
-        previous_ia_side_hop1zuo1: T::hop1zuo1_of(
-            T::from_cetkaikcore_absolute_side(cetkaik_core::absolute::Side::IASide),
-            &old_state.f,
-        ),
+        previous_a_side_hop1zuo1: T::hop1zuo1_of(ASide, &old_state.f),
+        previous_ia_side_hop1zuo1: T::hop1zuo1_of(IASide, &old_state.f),
         kut2tam2_happened: !config.failure_to_complete_the_move_means_exempt_from_kut2_tam2
             && step.map_or(false, |step| {
                 T::as_board_absolute(&old_state.f).peek(step) == Some(T::absolute_tam2())
@@ -272,14 +260,8 @@ fn apply_nontam_move<T: CetkaikRepresentation>(
         )?;
 
     let success = state::HandNotResolved_ {
-        previous_a_side_hop1zuo1: T::hop1zuo1_of(
-            T::from_cetkaikcore_absolute_side(cetkaik_core::absolute::Side::ASide),
-            &old_state.f,
-        ),
-        previous_ia_side_hop1zuo1: T::hop1zuo1_of(
-            T::from_cetkaikcore_absolute_side(cetkaik_core::absolute::Side::IASide),
-            &old_state.f,
-        ),
+        previous_a_side_hop1zuo1: T::hop1zuo1_of(ASide, &old_state.f),
+        previous_ia_side_hop1zuo1: T::hop1zuo1_of(IASide, &old_state.f),
         kut2tam2_happened: step.map_or(false, |step| {
             piece_on_field_at::<T>(&old_state.f, step) == Some(T::absolute_tam2())
         }),
@@ -297,7 +279,7 @@ fn apply_nontam_move<T: CetkaikRepresentation>(
     // 入水判定
     // water-entry cast
     if !T::is_water_absolute(src)
-        && !T::has_prof_absolute(src_piece, cetkaik_core::Profession::Nuak1)
+        && !T::has_prof_absolute(src_piece, cetkaik_fundamental::Profession::Nuak1)
         && T::is_water_absolute(dest)
     {
         return Ok(Probabilistic::Water {
@@ -353,14 +335,8 @@ pub fn apply_normal_move<T: CetkaikRepresentation>(
             }
 
             Ok(Probabilistic::Pure(state::HandNotResolved_ {
-                previous_a_side_hop1zuo1: T::hop1zuo1_of(
-                    T::from_cetkaikcore_absolute_side(cetkaik_core::absolute::Side::ASide),
-                    &old_state.f,
-                ),
-                previous_ia_side_hop1zuo1: T::hop1zuo1_of(
-                    T::from_cetkaikcore_absolute_side(cetkaik_core::absolute::Side::IASide),
-                    &old_state.f,
-                ),
+                previous_a_side_hop1zuo1: T::hop1zuo1_of(ASide, &old_state.f),
+                previous_ia_side_hop1zuo1: T::hop1zuo1_of(IASide, &old_state.f),
 
                 // The stepping of Tam2 never occurs if you are playing from hop1zuo1
                 // 持ち駒から打つ際には撃皇は決して起こらない
@@ -429,15 +405,16 @@ pub fn apply_normal_move<T: CetkaikRepresentation>(
 }
 
 /// ```
-/// use cetkaik_full_state_transition::message::InfAfterStep;
+/// use cetkaik_fundamental::*;
+/// use cetkaik_full_state_transition::message::InfAfterStep_;
 /// use cetkaik_full_state_transition::*;
-/// use cetkaik_core::absolute;
-/// use cetkaik_core::absolute::Coord;
-/// use cetkaik_core::absolute::Row::*;
-/// use cetkaik_core::absolute::Column::*;
-/// use cetkaik_yhuap_move_candidates::CetkaikCore;
-/// let ia_first = state::GroundState_::<CetkaikCore> {
-///     whose_turn: absolute::Side::IASide,
+/// use cetkaik_naive_representation::absolute;
+/// use cetkaik_naive_representation::absolute::Coord;
+/// use cetkaik_naive_representation::absolute::Row::*;
+/// use cetkaik_naive_representation::absolute::Column::*;
+/// use cetkaik_naive_representation::CetkaikNaive;
+/// let ia_first = state::GroundState_::<CetkaikNaive> {
+///     whose_turn: AbsoluteSide::IASide,
 ///     scores: Scores::new(),
 ///     rate: Rate::X1,
 ///     season: Season::Iei2,
@@ -445,10 +422,10 @@ pub fn apply_normal_move<T: CetkaikRepresentation>(
 ///     f: absolute::Field {
 ///         a_side_hop1zuo1: vec![],
 ///         ia_side_hop1zuo1: vec![],
-///         board: cetkaik_core::absolute::yhuap_initial_board(),
+///         board: cetkaik_naive_representation::absolute::yhuap_initial_board(),
 ///     },
 /// };
-/// let inf_after_step = InfAfterStep { src: Coord(AU, L), step: Coord(AU, K), planned_direction: Coord(AU, L) };
+/// let inf_after_step = InfAfterStep_ { src: Coord(AU, L), step: Coord(AU, K), planned_direction: Coord(AU, L) };
 /// apply_inf_after_step(&ia_first, inf_after_step, Config::cerke_online_alpha()).unwrap();
 /// ```
 
@@ -528,14 +505,8 @@ pub fn apply_after_half_acceptance<T: CetkaikRepresentation>(
     config: Config,
 ) -> Result<Probabilistic<state::HandNotResolved_<T>>, &'static str> {
     let nothing_happened = state::HandNotResolved_ {
-        previous_a_side_hop1zuo1: T::hop1zuo1_of(
-            T::from_cetkaikcore_absolute_side(cetkaik_core::absolute::Side::ASide),
-            &old_state.c.f,
-        ),
-        previous_ia_side_hop1zuo1: T::hop1zuo1_of(
-            T::from_cetkaikcore_absolute_side(cetkaik_core::absolute::Side::IASide),
-            &old_state.c.f,
-        ),
+        previous_a_side_hop1zuo1: T::hop1zuo1_of(ASide, &old_state.c.f),
+        previous_ia_side_hop1zuo1: T::hop1zuo1_of(IASide, &old_state.c.f),
         kut2tam2_happened: !config.failure_to_complete_the_move_means_exempt_from_kut2_tam2
             && old_state.piece_at_flying_piece_step() == T::absolute_tam2(),
         rate: old_state.c.rate,
@@ -569,14 +540,8 @@ pub fn apply_after_half_acceptance<T: CetkaikRepresentation>(
             )?;
 
         let success = state::HandNotResolved_ {
-            previous_a_side_hop1zuo1: T::hop1zuo1_of(
-                T::from_cetkaikcore_absolute_side(cetkaik_core::absolute::Side::ASide),
-                &old_state.c.f,
-            ),
-            previous_ia_side_hop1zuo1: T::hop1zuo1_of(
-                T::from_cetkaikcore_absolute_side(cetkaik_core::absolute::Side::IASide),
-                &old_state.c.f,
-            ),
+            previous_a_side_hop1zuo1: T::hop1zuo1_of(ASide, &old_state.c.f),
+            previous_ia_side_hop1zuo1: T::hop1zuo1_of(IASide, &old_state.c.f),
             kut2tam2_happened: old_state.piece_at_flying_piece_step() == T::absolute_tam2(),
             rate: old_state.c.rate,
             i_have_moved_tam_in_this_turn: false,
@@ -593,7 +558,7 @@ pub fn apply_after_half_acceptance<T: CetkaikRepresentation>(
         // Hence sticks must be cast.
         // 入水判定が免除される特例（出発地点が皇水であるか、移動している駒が船である）なしで水に入ろうとしているので、判定が必要。
         if !T::is_water_absolute(old_state.c.flying_piece_src)
-            && !T::has_prof_absolute(piece, cetkaik_core::Profession::Nuak1)
+            && !T::has_prof_absolute(piece, cetkaik_fundamental::Profession::Nuak1)
             && T::is_water_absolute(dest)
         {
             Ok(Probabilistic::Water {
@@ -723,10 +688,8 @@ pub fn resolve<T: CetkaikRepresentation + Clone>(
     use cetkaik_calculate_hand::{calculate_hands_and_score_from_pieces, ScoreAndHands};
     let tymoxtaxot_because_of_kut2tam2 = state.kut2tam2_happened && config.step_tam_is_a_hand;
 
-    let tymoxtaxot_because_of_newly_acquired: Option<i32> = match T::to_cetkaikcore_absolute_side(
-        state.whose_turn,
-    ) {
-        absolute::Side::ASide => {
+    let tymoxtaxot_because_of_newly_acquired: Option<i32> = match state.whose_turn {
+        AbsoluteSide::ASide => {
             if state.previous_a_side_hop1zuo1 == T::hop1zuo1_of(state.whose_turn, &state.f) {
                 None
             } else {
@@ -749,7 +712,7 @@ pub fn resolve<T: CetkaikRepresentation + Clone>(
                 }
             }
         }
-        absolute::Side::IASide => {
+        AbsoluteSide::IASide => {
             if state.previous_ia_side_hop1zuo1 == T::hop1zuo1_of(state.whose_turn, &state.f) {
                 None
             } else {
@@ -781,17 +744,14 @@ pub fn resolve<T: CetkaikRepresentation + Clone>(
         // nothing happened; hand the turn to the next person
         // 役ができていないので、次の人に手番を渡す
         // 減点分×レートは引く。
-        match state.scores.edit(
-            state.tam2tysak2_raw_penalty,
-            T::to_cetkaikcore_absolute_side(state.whose_turn),
-            state.rate,
-        ) {
+        match state
+            .scores
+            .edit(state.tam2tysak2_raw_penalty, state.whose_turn, state.rate)
+        {
             Ok(new_scores) => {
                 return state::HandResolved_::NeitherTymokNorTaxot(state::GroundState_ {
                     f: state.f.clone(),
-                    whose_turn: T::from_cetkaikcore_absolute_side(
-                        !T::to_cetkaikcore_absolute_side(state.whose_turn),
-                    ), /* hand the turn to the next person */
+                    whose_turn: !state.whose_turn, /* hand the turn to the next person */
                     season: state.season,
                     scores: new_scores,
                     rate: state.rate,
@@ -813,11 +773,7 @@ pub fn resolve<T: CetkaikRepresentation + Clone>(
         }
         + tymoxtaxot_because_of_newly_acquired.unwrap_or(0);
 
-    let if_taxot = match state.scores.edit(
-        raw_score,
-        T::to_cetkaikcore_absolute_side(state.whose_turn),
-        state.rate,
-    ) {
+    let if_taxot = match state.scores.edit(raw_score, state.whose_turn, state.rate) {
         Err(victor) => IfTaxot_::VictoriousSide(victor),
         Ok(new_scores) => {
             state.season.next().map_or(
@@ -832,9 +788,7 @@ pub fn resolve<T: CetkaikRepresentation + Clone>(
     state::HandResolved_::HandExists {
         if_tymok: state::GroundState_ {
             f: state.f.clone(),
-            whose_turn: T::from_cetkaikcore_absolute_side(!T::to_cetkaikcore_absolute_side(
-                state.whose_turn,
-            )), /* hand the turn to the next person */
+            whose_turn: !state.whose_turn, /* hand the turn to the next person */
             season: state.season,
             scores: state.scores,
             rate: state.rate.next(), /* double the stake */
@@ -857,7 +811,7 @@ fn beginning_of_season<T: CetkaikRepresentation + Clone>(
     scores: Scores,
 ) -> Probabilistic<state::GroundState_<T>> {
     let ia_first = state::GroundState_ {
-        whose_turn: T::from_cetkaikcore_absolute_side(absolute::Side::IASide),
+        whose_turn: AbsoluteSide::IASide,
         scores,
         rate: Rate::X1,
         season,
@@ -866,7 +820,7 @@ fn beginning_of_season<T: CetkaikRepresentation + Clone>(
     };
     Probabilistic::WhoGoesFirst {
         a_first: state::GroundState_ {
-            whose_turn: T::from_cetkaikcore_absolute_side(absolute::Side::ASide),
+            whose_turn: AbsoluteSide::ASide,
             ..ia_first.clone()
         },
         ia_first,

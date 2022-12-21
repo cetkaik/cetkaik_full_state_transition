@@ -1,7 +1,8 @@
 use crate::IfTaxot_;
 
 use super::{state, Rate, Scores, Season};
-use cetkaik_yhuap_move_candidates::CetkaikRepresentation;
+use cetkaik_fundamental::AbsoluteSide;
+use cetkaik_interface::CetkaikRepresentation;
 use serde::{Deserialize, Serialize};
 
 type PM<T> = super::message::PureMove__<<T as CetkaikRepresentation>::AbsoluteCoord>;
@@ -10,7 +11,7 @@ type PM<T> = super::message::PureMove__<<T as CetkaikRepresentation>::AbsoluteCo
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct GroundState_<T: CetkaikRepresentation> {
     pub f: T::AbsoluteField,
-    pub whose_turn: T::AbsoluteSide,
+    pub whose_turn: AbsoluteSide,
     pub season: Season,
     pub scores: Scores,
     pub rate: Rate,
@@ -19,13 +20,14 @@ pub struct GroundState_<T: CetkaikRepresentation> {
 
 impl<T: CetkaikRepresentation> state::GroundState_<T> {
     /// ```
-    /// use cetkaik_full_state_transition::message::InfAfterStep;
+    /// use cetkaik_full_state_transition::message::InfAfterStep_;
     /// use cetkaik_full_state_transition::*;
-    /// use cetkaik_core::absolute;
-    /// use cetkaik_core::absolute::Coord;
-    /// use cetkaik_core::absolute::Row::*;
-    /// use cetkaik_core::absolute::Column::*;
-    /// use cetkaik_yhuap_move_candidates::CetkaikCore;
+    /// use cetkaik_naive_representation::absolute;
+    /// use cetkaik_naive_representation::absolute::Coord;
+    /// use cetkaik_naive_representation::absolute::Row::*;
+    /// use cetkaik_naive_representation::absolute::Column::*;
+    /// use cetkaik_naive_representation::CetkaikNaive;
+    /// use cetkaik_fundamental::AbsoluteSide;
     /// use std::collections::HashSet;
     /// fn assert_eq_ignoring_order<T>(a: &[T], b: &[T])
     /// where
@@ -36,8 +38,8 @@ impl<T: CetkaikRepresentation> state::GroundState_<T> {
     ///
     ///     assert_eq!(a, b)
     /// }
-    /// let ia_first = state::GroundState_::<CetkaikCore> {
-    ///     whose_turn: absolute::Side::IASide,
+    /// let ia_first = state::GroundState_::<CetkaikNaive> {
+    ///     whose_turn: AbsoluteSide::IASide,
     ///     scores: Scores::new(),
     ///     rate: Rate::X1,
     ///     season: Season::Iei2,
@@ -45,7 +47,7 @@ impl<T: CetkaikRepresentation> state::GroundState_<T> {
     ///     f: absolute::Field {
     ///         a_side_hop1zuo1: vec![],
     ///         ia_side_hop1zuo1: vec![],
-    ///         board: cetkaik_core::absolute::yhuap_initial_board(),
+    ///         board: cetkaik_naive_representation::absolute::yhuap_initial_board(),
     ///     },
     /// };
     /// let (hop1zuo1_candidates, candidates) = ia_first.get_candidates(Config::cerke_online_alpha());
@@ -53,52 +55,52 @@ impl<T: CetkaikRepresentation> state::GroundState_<T> {
     /// let inf_after_step: Vec<_> = candidates.into_iter()
     ///     .filter_map(|a|
     ///         match a {
-    ///             message::PureMove::InfAfterStep(m) => Some(m),
+    ///             message::PureMove__::InfAfterStep(m) => Some(m),
     ///             _ => None
     ///         }
     ///     ).collect();
     /// assert_eq_ignoring_order(&inf_after_step, &vec![
-    ///     InfAfterStep { src: Coord(IA, P), step: Coord(AU, P), planned_direction: Coord(IA, P) },
-    ///     InfAfterStep { src: Coord(IA, K), step: Coord(AU, K), planned_direction: Coord(IA, K) },
-    ///     InfAfterStep { src: Coord(AU, P), step: Coord(AU, M), planned_direction: Coord(AU, C) },
-    ///     InfAfterStep { src: Coord(AU, P), step: Coord(AU, M), planned_direction: Coord(AU, P) },
-    ///     InfAfterStep { src: Coord(AU, M), step: Coord(AI, M), planned_direction: Coord(Y, M) },
-    ///     InfAfterStep { src: Coord(AU, M), step: Coord(AI, M), planned_direction: Coord(O, M) },
-    ///     InfAfterStep { src: Coord(AU, M), step: Coord(AI, M), planned_direction: Coord(U, M) },
-    ///     InfAfterStep { src: Coord(AU, M), step: Coord(AI, M), planned_direction: Coord(I, M) },
-    ///     InfAfterStep { src: Coord(AU, M), step: Coord(AI, M), planned_direction: Coord(AU, M) },
-    ///     InfAfterStep { src: Coord(AU, M), step: Coord(IA, M), planned_direction: Coord(AU, M) },
-    ///     InfAfterStep { src: Coord(AU, M), step: Coord(AU, X), planned_direction: Coord(AU, Z) },
-    ///     InfAfterStep { src: Coord(AU, M), step: Coord(AU, X), planned_direction: Coord(AU, C) },
-    ///     InfAfterStep { src: Coord(AU, M), step: Coord(AU, X), planned_direction: Coord(AU, M) },
-    ///     InfAfterStep { src: Coord(AU, M), step: Coord(AU, P), planned_direction: Coord(AU, M) },
-    ///     InfAfterStep { src: Coord(AU, M), step: Coord(AU, P), planned_direction: Coord(AU, C) },
-    ///     InfAfterStep { src: Coord(AU, X), step: Coord(AI, C), planned_direction: Coord(Y, X) },
-    ///     InfAfterStep { src: Coord(AU, X), step: Coord(AI, C), planned_direction: Coord(O, P) },
-    ///     InfAfterStep { src: Coord(AU, X), step: Coord(AI, C), planned_direction: Coord(Y, M) },
-    ///     InfAfterStep { src: Coord(AU, X), step: Coord(AI, C), planned_direction: Coord(AU, X) },
-    ///     InfAfterStep { src: Coord(AU, T), step: Coord(AI, N), planned_direction: Coord(O, K) },
-    ///     InfAfterStep { src: Coord(AU, T), step: Coord(AI, N), planned_direction: Coord(Y, L) },
-    ///     InfAfterStep { src: Coord(AU, T), step: Coord(AI, N), planned_direction: Coord(Y, T) },
-    ///     InfAfterStep { src: Coord(AU, T), step: Coord(AI, N), planned_direction: Coord(AU, T) },
-    ///     InfAfterStep { src: Coord(AU, L), step: Coord(AI, L), planned_direction: Coord(Y, L) },
-    ///     InfAfterStep { src: Coord(AU, L), step: Coord(AI, L), planned_direction: Coord(O, L) },
-    ///     InfAfterStep { src: Coord(AU, L), step: Coord(AI, L), planned_direction: Coord(U, L) },
-    ///     InfAfterStep { src: Coord(AU, L), step: Coord(AI, L), planned_direction: Coord(I, L) },
-    ///     InfAfterStep { src: Coord(AU, L), step: Coord(AI, L), planned_direction: Coord(AU, L) },
-    ///     InfAfterStep { src: Coord(AU, L), step: Coord(IA, L), planned_direction: Coord(AU, L) },
-    ///     InfAfterStep { src: Coord(AU, L), step: Coord(AU, K), planned_direction: Coord(AU, L) },
-    ///     InfAfterStep { src: Coord(AU, L), step: Coord(AU, K), planned_direction: Coord(AU, N) },
-    ///     InfAfterStep { src: Coord(AU, L), step: Coord(AU, T), planned_direction: Coord(AU, N) },
-    ///     InfAfterStep { src: Coord(AU, L), step: Coord(AU, T), planned_direction: Coord(AU, L) },
-    ///     InfAfterStep { src: Coord(AU, L), step: Coord(AU, T), planned_direction: Coord(AU, Z) },
-    ///     InfAfterStep { src: Coord(AU, K), step: Coord(AU, L), planned_direction: Coord(AU, K) },
-    ///     InfAfterStep { src: Coord(AU, K), step: Coord(AU, L), planned_direction: Coord(AU, N) },
-    ///     InfAfterStep { src: Coord(AI, Z), step: Coord(O, Z), planned_direction: Coord(U, Z) },
-    ///     InfAfterStep { src: Coord(AI, Z), step: Coord(O, Z), planned_direction: Coord(I, Z) },
-    ///     InfAfterStep { src: Coord(AI, Z), step: Coord(O, Z), planned_direction: Coord(Y, Z) },
-    ///     InfAfterStep { src: Coord(AI, Z), step: Coord(O, Z), planned_direction: Coord(AI, Z) },
-    ///     InfAfterStep { src: Coord(AI, Z), step: Coord(O, Z), planned_direction: Coord(AU, Z) }
+    ///     InfAfterStep_ { src: Coord(IA, P), step: Coord(AU, P), planned_direction: Coord(IA, P) },
+    ///     InfAfterStep_ { src: Coord(IA, K), step: Coord(AU, K), planned_direction: Coord(IA, K) },
+    ///     InfAfterStep_ { src: Coord(AU, P), step: Coord(AU, M), planned_direction: Coord(AU, C) },
+    ///     InfAfterStep_ { src: Coord(AU, P), step: Coord(AU, M), planned_direction: Coord(AU, P) },
+    ///     InfAfterStep_ { src: Coord(AU, M), step: Coord(AI, M), planned_direction: Coord(Y, M) },
+    ///     InfAfterStep_ { src: Coord(AU, M), step: Coord(AI, M), planned_direction: Coord(O, M) },
+    ///     InfAfterStep_ { src: Coord(AU, M), step: Coord(AI, M), planned_direction: Coord(U, M) },
+    ///     InfAfterStep_ { src: Coord(AU, M), step: Coord(AI, M), planned_direction: Coord(I, M) },
+    ///     InfAfterStep_ { src: Coord(AU, M), step: Coord(AI, M), planned_direction: Coord(AU, M) },
+    ///     InfAfterStep_ { src: Coord(AU, M), step: Coord(IA, M), planned_direction: Coord(AU, M) },
+    ///     InfAfterStep_ { src: Coord(AU, M), step: Coord(AU, X), planned_direction: Coord(AU, Z) },
+    ///     InfAfterStep_ { src: Coord(AU, M), step: Coord(AU, X), planned_direction: Coord(AU, C) },
+    ///     InfAfterStep_ { src: Coord(AU, M), step: Coord(AU, X), planned_direction: Coord(AU, M) },
+    ///     InfAfterStep_ { src: Coord(AU, M), step: Coord(AU, P), planned_direction: Coord(AU, M) },
+    ///     InfAfterStep_ { src: Coord(AU, M), step: Coord(AU, P), planned_direction: Coord(AU, C) },
+    ///     InfAfterStep_ { src: Coord(AU, X), step: Coord(AI, C), planned_direction: Coord(Y, X) },
+    ///     InfAfterStep_ { src: Coord(AU, X), step: Coord(AI, C), planned_direction: Coord(O, P) },
+    ///     InfAfterStep_ { src: Coord(AU, X), step: Coord(AI, C), planned_direction: Coord(Y, M) },
+    ///     InfAfterStep_ { src: Coord(AU, X), step: Coord(AI, C), planned_direction: Coord(AU, X) },
+    ///     InfAfterStep_ { src: Coord(AU, T), step: Coord(AI, N), planned_direction: Coord(O, K) },
+    ///     InfAfterStep_ { src: Coord(AU, T), step: Coord(AI, N), planned_direction: Coord(Y, L) },
+    ///     InfAfterStep_ { src: Coord(AU, T), step: Coord(AI, N), planned_direction: Coord(Y, T) },
+    ///     InfAfterStep_ { src: Coord(AU, T), step: Coord(AI, N), planned_direction: Coord(AU, T) },
+    ///     InfAfterStep_ { src: Coord(AU, L), step: Coord(AI, L), planned_direction: Coord(Y, L) },
+    ///     InfAfterStep_ { src: Coord(AU, L), step: Coord(AI, L), planned_direction: Coord(O, L) },
+    ///     InfAfterStep_ { src: Coord(AU, L), step: Coord(AI, L), planned_direction: Coord(U, L) },
+    ///     InfAfterStep_ { src: Coord(AU, L), step: Coord(AI, L), planned_direction: Coord(I, L) },
+    ///     InfAfterStep_ { src: Coord(AU, L), step: Coord(AI, L), planned_direction: Coord(AU, L) },
+    ///     InfAfterStep_ { src: Coord(AU, L), step: Coord(IA, L), planned_direction: Coord(AU, L) },
+    ///     InfAfterStep_ { src: Coord(AU, L), step: Coord(AU, K), planned_direction: Coord(AU, L) },
+    ///     InfAfterStep_ { src: Coord(AU, L), step: Coord(AU, K), planned_direction: Coord(AU, N) },
+    ///     InfAfterStep_ { src: Coord(AU, L), step: Coord(AU, T), planned_direction: Coord(AU, N) },
+    ///     InfAfterStep_ { src: Coord(AU, L), step: Coord(AU, T), planned_direction: Coord(AU, L) },
+    ///     InfAfterStep_ { src: Coord(AU, L), step: Coord(AU, T), planned_direction: Coord(AU, Z) },
+    ///     InfAfterStep_ { src: Coord(AU, K), step: Coord(AU, L), planned_direction: Coord(AU, K) },
+    ///     InfAfterStep_ { src: Coord(AU, K), step: Coord(AU, L), planned_direction: Coord(AU, N) },
+    ///     InfAfterStep_ { src: Coord(AI, Z), step: Coord(O, Z), planned_direction: Coord(U, Z) },
+    ///     InfAfterStep_ { src: Coord(AI, Z), step: Coord(O, Z), planned_direction: Coord(I, Z) },
+    ///     InfAfterStep_ { src: Coord(AI, Z), step: Coord(O, Z), planned_direction: Coord(Y, Z) },
+    ///     InfAfterStep_ { src: Coord(AI, Z), step: Coord(O, Z), planned_direction: Coord(AI, Z) },
+    ///     InfAfterStep_ { src: Coord(AI, Z), step: Coord(O, Z), planned_direction: Coord(AU, Z) }
     /// ])
     /// ```
     #[must_use]
@@ -168,41 +170,44 @@ impl<T: CetkaikRepresentation> state::GroundState_<T> {
 
 #[test]
 fn test_get_candidates() {
-    use super::absolute;
-    use crate::message::AfterHalfAcceptance;
-    use cetkaik_yhuap_move_candidates::CetkaikCore;
+    use crate::message::AfterHalfAcceptance_;
+    use cetkaik_naive_representation::absolute;
+
     use absolute::{
         Column::Z,
         Coord,
         Row::{AI, E, I, O, U},
     };
-    use cetkaik_core::Profession;
+    use cetkaik_fundamental::Profession;
+    use cetkaik_naive_representation::CetkaikNaive;
     assert_eq!(
-        ExcitedState_::<CetkaikCore> {
+        ExcitedState_::<CetkaikNaive> {
             c: ExcitedStateWithoutCiurl_ {
                 f: absolute::Field {
                     a_side_hop1zuo1: vec![],
                     ia_side_hop1zuo1: vec![],
-                    board: std::collections::HashMap::from([
-                        (
-                            absolute::Coord(AI, Z),
-                            absolute::Piece::NonTam2Piece {
-                                color: cetkaik_core::Color::Huok2,
-                                prof: Profession::Nuak1,
-                                side: absolute::Side::IASide
-                            }
-                        ),
-                        (
-                            absolute::Coord(O, Z),
-                            absolute::Piece::NonTam2Piece {
-                                color: cetkaik_core::Color::Huok2,
-                                prof: Profession::Kauk2,
-                                side: absolute::Side::IASide
-                            }
-                        )
-                    ])
+                    board: cetkaik_naive_representation::absolute::Board(
+                        std::collections::HashMap::from([
+                            (
+                                absolute::Coord(AI, Z),
+                                absolute::Piece::NonTam2Piece {
+                                    color: cetkaik_fundamental::Color::Huok2,
+                                    prof: Profession::Nuak1,
+                                    side: AbsoluteSide::IASide
+                                }
+                            ),
+                            (
+                                absolute::Coord(O, Z),
+                                absolute::Piece::NonTam2Piece {
+                                    color: cetkaik_fundamental::Color::Huok2,
+                                    prof: Profession::Kauk2,
+                                    side: AbsoluteSide::IASide
+                                }
+                            )
+                        ])
+                    )
                 },
-                whose_turn: absolute::Side::IASide,
+                whose_turn: AbsoluteSide::IASide,
                 flying_piece_src: absolute::Coord(AI, Z),
                 flying_piece_step: absolute::Coord(O, Z),
                 flying_piece_planned_direction: absolute::Coord(I, Z),
@@ -214,14 +219,14 @@ fn test_get_candidates() {
         }
         .get_candidates(crate::Config::cerke_online_alpha()),
         vec![
-            AfterHalfAcceptance { dest: None },
-            AfterHalfAcceptance {
+            AfterHalfAcceptance_ { dest: None },
+            AfterHalfAcceptance_ {
                 dest: Some(Coord(U, Z))
             },
-            AfterHalfAcceptance {
+            AfterHalfAcceptance_ {
                 dest: Some(Coord(I, Z))
             },
-            AfterHalfAcceptance {
+            AfterHalfAcceptance_ {
                 dest: Some(Coord(E, Z))
             }
         ]
@@ -252,7 +257,7 @@ impl<T: CetkaikRepresentation> state::ExcitedState_<T> {
         );
 
         let destinations = candidates.into_iter().filter_map(|cand| match cand {
-            cetkaik_core::PureMove_::InfAfterStep {
+            cetkaik_fundamental::PureMove_::InfAfterStep {
                 src,
                 step,
                 planned_direction,
@@ -294,7 +299,7 @@ impl<T: CetkaikRepresentation> state::ExcitedState_<T> {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ExcitedStateWithoutCiurl_<T: CetkaikRepresentation> {
     pub f: T::AbsoluteField,
-    pub whose_turn: T::AbsoluteSide,
+    pub whose_turn: AbsoluteSide,
     pub flying_piece_src: T::AbsoluteCoord,
     pub flying_piece_step: T::AbsoluteCoord,
     pub flying_piece_planned_direction: T::AbsoluteCoord,
@@ -308,13 +313,13 @@ pub struct ExcitedStateWithoutCiurl_<T: CetkaikRepresentation> {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct HandNotResolved_<T: CetkaikRepresentation> {
     pub f: T::AbsoluteField,
-    pub whose_turn: T::AbsoluteSide,
+    pub whose_turn: AbsoluteSide,
     pub season: Season,
     pub scores: Scores,
     pub rate: Rate,
     pub i_have_moved_tam_in_this_turn: bool,
-    pub previous_a_side_hop1zuo1: Vec<cetkaik_core::ColorAndProf>,
-    pub previous_ia_side_hop1zuo1: Vec<cetkaik_core::ColorAndProf>,
+    pub previous_a_side_hop1zuo1: Vec<cetkaik_fundamental::ColorAndProf>,
+    pub previous_ia_side_hop1zuo1: Vec<cetkaik_fundamental::ColorAndProf>,
     pub kut2tam2_happened: bool,
     pub tam2tysak2_raw_penalty: i32,
 
