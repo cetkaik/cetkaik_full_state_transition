@@ -8,10 +8,10 @@
 
 use cetkaik_fundamental::AbsoluteSide;
 use cetkaik_fundamental::AbsoluteSide::{ASide, IASide};
-use cetkaik_interface::CetkaikRepresentation;
-use cetkaik_interface::IsAbsoluteField;
-use cetkaik_interface::IsBoard;
-use cetkaik_interface::IsField;
+use cetkaik_traits::CetkaikRepresentation;
+use cetkaik_traits::IsAbsoluteField;
+use cetkaik_traits::IsBoard;
+use cetkaik_traits::IsField;
 use serde::{Deserialize, Serialize};
 
 /// Represents the season. Currently, only four-season games are supported.

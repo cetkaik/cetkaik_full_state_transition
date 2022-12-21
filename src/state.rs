@@ -2,7 +2,7 @@ use crate::IfTaxot_;
 
 use super::{state, Rate, Scores, Season};
 use cetkaik_fundamental::AbsoluteSide;
-use cetkaik_interface::CetkaikRepresentation;
+use cetkaik_traits::CetkaikRepresentation;
 use serde::{Deserialize, Serialize};
 
 type PM<T> = super::message::PureMove__<<T as CetkaikRepresentation>::AbsoluteCoord>;
