@@ -6,6 +6,7 @@
     clippy::module_name_repetitions
 )]
 
+use cetkaik_core::IsBoard;
 use cetkaik_yhuap_move_candidates::CetkaikCore;
 use cetkaik_yhuap_move_candidates::CetkaikRepresentation;
 use serde::{Deserialize, Serialize};
@@ -31,6 +32,27 @@ pub mod message;
 /// Describes the probability distribution of states. Exactly which state is reached depends on the server-side result of casting sticks.
 /// ／状態の確率分布を表現する。サーバー側で投げ棒を乱択することで、どの状態に至るかが決まる。
 pub mod probabilistic;
+
+fn field_is_empty_at<T: CetkaikRepresentation>(
+    f: &T::AbsoluteField,
+    coord: T::AbsoluteCoord,
+) -> bool {
+    T::absolute_get(T::as_board_absolute(f), coord).is_none()
+}
+
+fn field_is_occupied_at<T: CetkaikRepresentation>(
+    f: &T::AbsoluteField,
+    coord: T::AbsoluteCoord,
+) -> bool {
+    T::absolute_get(T::as_board_absolute(f), coord).is_some()
+}
+
+fn piece_on_field_at<T: CetkaikRepresentation>(
+    f: &T::AbsoluteField,
+    coord: T::AbsoluteCoord,
+) -> Option<T::AbsolutePiece> {
+    T::absolute_get(T::as_board_absolute(f), coord)
+}
 
 impl Season {
     #[must_use]
@@ -61,24 +83,16 @@ use cetkaik_core::absolute;
 /// <https://docs.google.com/presentation/d/1IL8lelkw3oZif3QUQaKzGCPCLiBguM2kXjgOx9Cgetw/edit#slide=id.g788f78d7d6_0_0> を参照すること。
 pub mod state;
 
-impl state::ExcitedState {
+impl<T: CetkaikRepresentation> state::ExcitedState_<T> {
     #[must_use]
-    pub fn piece_at_flying_piece_src(&self) -> absolute::Piece {
-        *self
-            .c
-            .f
-            .board
-            .get(&self.c.flying_piece_src)
+    pub fn piece_at_flying_piece_src(&self) -> T::AbsolutePiece {
+        piece_on_field_at::<T>(&self.c.f, self.c.flying_piece_src)
             .expect("Invalid `state::ExcitedState`: at `flying_piece_src` there is no piece")
     }
 
     #[must_use]
-    pub fn piece_at_flying_piece_step(&self) -> absolute::Piece {
-        *self
-            .c
-            .f
-            .board
-            .get(&self.c.flying_piece_step)
+    pub fn piece_at_flying_piece_step(&self) -> T::AbsolutePiece {
+        piece_on_field_at::<T>(&self.c.f, self.c.flying_piece_step)
             .expect("Invalid `state::ExcitedState`: at `flying_piece_step` there is no piece")
     }
 }
@@ -128,14 +142,14 @@ impl Rate {
     }
 }
 
-fn apply_tam_move(
-    old_state: &state::GroundState,
-    src: absolute::Coord,
-    first_dest: absolute::Coord,
-    second_dest: absolute::Coord,
-    step: Option<absolute::Coord>,
+fn apply_tam_move<T: CetkaikRepresentation>(
+    old_state: &state::GroundState_<T>,
+    src: T::AbsoluteCoord,
+    first_dest: T::AbsoluteCoord,
+    second_dest: T::AbsoluteCoord,
+    step: Option<T::AbsoluteCoord>,
     config: Config,
-) -> Result<Probabilistic<state::HandNotResolved>, &'static str> {
+) -> Result<Probabilistic<state::HandNotResolved_<T>>, &'static str> {
     let (penalty1, is_a_hand1) = if old_state.tam_has_moved_previously {
         match config.moving_tam_immediately_after_tam_has_moved {
                 Consequence::Allowed => (0, false),
@@ -161,33 +175,38 @@ fn apply_tam_move(
             (0, false)
         };
     let mut new_field = old_state.f.clone();
-    let expect_tam = new_field
-        .board
-        .remove(&src)
+    let expect_tam = T::as_board_mut_absolute(&mut new_field)
+        .pop(src)
         .ok_or("expected tam2 but found an empty square")?;
-    if !expect_tam.is_tam2() {
+    if expect_tam != T::absolute_tam2() {
         return Err("expected tam2 but found a non-tam2 piece");
     }
 
-    if new_field.board.contains_key(&first_dest) {
+    if field_is_occupied_at::<T>(&new_field, first_dest) {
         return Err("the first destination is already occupied");
     }
 
     if let Some(st) = step {
-        if !new_field.board.contains_key(&st) {
+        if field_is_empty_at::<T>(&new_field, st) {
             return Err("the stepping square is empty");
         }
     }
 
-    if new_field.board.contains_key(&second_dest) {
+    if field_is_occupied_at::<T>(&new_field, second_dest) {
         return Err("the second destination is already occupied");
     }
 
-    new_field.board.insert(second_dest, absolute::Piece::Tam2);
+    T::as_board_mut_absolute(&mut new_field).put(second_dest, Some(T::absolute_tam2()));
 
-    Ok(Probabilistic::Pure(state::HandNotResolved {
-        previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
-        previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
+    Ok(Probabilistic::Pure(state::HandNotResolved_ {
+        previous_a_side_hop1zuo1: T::hop1zuo1_of(
+            T::from_cetkaikcore_absolute_side(cetkaik_core::absolute::Side::ASide),
+            &old_state.f,
+        ),
+        previous_ia_side_hop1zuo1: T::hop1zuo1_of(
+            T::from_cetkaikcore_absolute_side(cetkaik_core::absolute::Side::IASide),
+            &old_state.f,
+        ),
 
         // When Tam2 moves, Tam2 is never stepped on (this assumption fails with the two-tam rule, which is not yet supported.)
         // 皇の動きで撃皇が発生することはない（二皇の場合は修正が必要）
@@ -203,19 +222,27 @@ fn apply_tam_move(
     }))
 }
 
-fn apply_nontam_move(
-    old_state: &state::GroundState,
-    src: absolute::Coord,
-    dest: absolute::Coord,
-    step: Option<absolute::Coord>,
+fn apply_nontam_move<T: CetkaikRepresentation>(
+    old_state: &state::GroundState_<T>,
+    src: T::AbsoluteCoord,
+    dest: T::AbsoluteCoord,
+    step: Option<T::AbsoluteCoord>,
     config: Config,
-) -> Result<Probabilistic<state::HandNotResolved>, &'static str> {
-    let nothing_happened = state::HandNotResolved {
-        previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
-        previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
+) -> Result<Probabilistic<state::HandNotResolved_<T>>, &'static str> {
+    use cetkaik_core::IsField;
+
+    let nothing_happened = state::HandNotResolved_ {
+        previous_a_side_hop1zuo1: T::hop1zuo1_of(
+            T::from_cetkaikcore_absolute_side(cetkaik_core::absolute::Side::ASide),
+            &old_state.f,
+        ),
+        previous_ia_side_hop1zuo1: T::hop1zuo1_of(
+            T::from_cetkaikcore_absolute_side(cetkaik_core::absolute::Side::IASide),
+            &old_state.f,
+        ),
         kut2tam2_happened: !config.failure_to_complete_the_move_means_exempt_from_kut2_tam2
             && step.map_or(false, |step| {
-                matches!(old_state.f.board.get(&step), Some(absolute::Piece::Tam2))
+                T::as_board_absolute(&old_state.f).peek(step) == Some(T::absolute_tam2())
             }),
         rate: old_state.rate,
         i_have_moved_tam_in_this_turn: false,
@@ -229,39 +256,33 @@ fn apply_nontam_move(
     };
 
     if let Some(st) = step {
-        if !old_state.f.board.contains_key(&st) {
+        if field_is_empty_at::<T>(&old_state.f, st) {
             return Err("expected a stepping square but found an empty square");
         }
     }
 
-    let src_piece = old_state
-        .f
-        .board
-        .get(&src)
-        .ok_or("src does not contain a piece")?;
+    let src_piece: T::AbsolutePiece =
+        piece_on_field_at::<T>(&old_state.f, src).ok_or("src does not contain a piece")?;
 
-    let (new_board, maybe_captured_piece) =
-        move_nontam_piece_from_src_to_dest_while_taking_opponent_piece_if_needed(
-            &old_state.f.board,
+    let new_field = old_state
+        .f
+        .move_nontam_piece_from_src_to_dest_while_taking_opponent_piece_if_needed(
             src,
             dest,
             old_state.whose_turn,
         )?;
-    let mut new_field = absolute::Field {
-        board: new_board,
-        a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
-        ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
-    };
 
-    if let Some(absolute::NonTam2Piece { color, prof }) = maybe_captured_piece {
-        new_field.insert_nontam_piece_into_hop1zuo1(color, prof, old_state.whose_turn);
-    }
-
-    let success = state::HandNotResolved {
-        previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
-        previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
+    let success = state::HandNotResolved_ {
+        previous_a_side_hop1zuo1: T::hop1zuo1_of(
+            T::from_cetkaikcore_absolute_side(cetkaik_core::absolute::Side::ASide),
+            &old_state.f,
+        ),
+        previous_ia_side_hop1zuo1: T::hop1zuo1_of(
+            T::from_cetkaikcore_absolute_side(cetkaik_core::absolute::Side::IASide),
+            &old_state.f,
+        ),
         kut2tam2_happened: step.map_or(false, |step| {
-            matches!(old_state.f.board.get(&step), Some(absolute::Piece::Tam2))
+            piece_on_field_at::<T>(&old_state.f, step) == Some(T::absolute_tam2())
         }),
         rate: old_state.rate,
         i_have_moved_tam_in_this_turn: false,
@@ -276,9 +297,9 @@ fn apply_nontam_move(
 
     // 入水判定
     // water-entry cast
-    if !absolute::is_water(src)
-        && !src_piece.has_prof(cetkaik_core::Profession::Nuak1)
-        && absolute::is_water(dest)
+    if !T::is_water_absolute(src)
+        && !T::has_prof_absolute(src_piece, cetkaik_core::Profession::Nuak1)
+        && T::is_water_absolute(dest)
     {
         return Ok(Probabilistic::Water {
             failure: nothing_happened,
@@ -290,13 +311,13 @@ fn apply_nontam_move(
 
 /// When completely stuck, call this function to end the game.
 /// ／完全に手詰まりのときは、この関数を呼び出すことで即時決着がつく。
-pub fn no_move_possible_at_all(
-    old_state: &state::GroundState,
+pub fn no_move_possible_at_all<T: CetkaikRepresentation>(
+    old_state: &state::GroundState_<T>,
     config: Config,
-) -> Result<state::HandResolved, &'static str> {
+) -> Result<state::HandResolved_<T>, &'static str> {
     let (hop1zuo1_candidates, candidates) = old_state.get_candidates(config);
     if hop1zuo1_candidates.is_empty() && candidates.is_empty() {
-        Ok(state::HandResolved::GameEndsWithoutTymokTaxot(
+        Ok(state::HandResolved_::GameEndsWithoutTymokTaxot(
             old_state.scores.which_side_is_winning(),
         ))
     } else {
@@ -439,35 +460,35 @@ pub fn apply_normal_move(
 /// ```
 
 /// `InfAfterStep` sends `GroundState` to `Probabilistic<ExcitedState>`
-pub fn apply_inf_after_step(
-    old_state: &state::GroundState,
-    msg: message::InfAfterStep,
+pub fn apply_inf_after_step<T: CetkaikRepresentation + Clone>(
+    old_state: &state::GroundState_<T>,
+    msg: message::InfAfterStep_<T::AbsoluteCoord>,
     config: Config,
-) -> Result<Probabilistic<state::ExcitedState>, &'static str> {
-    if !old_state.f.board.contains_key(&msg.src) {
+) -> Result<Probabilistic<state::ExcitedState_<T>>, &'static str> {
+    if field_is_empty_at::<T>(&old_state.f, msg.src) {
         return Err("In InfAfterStep, `src` is not occupied; illegal");
     }
 
-    if !old_state.f.board.contains_key(&msg.step) {
+    if field_is_empty_at::<T>(&old_state.f, msg.step) {
         return Err("In InfAfterStep, `step` is not occupied; illegal");
     }
 
     let (_hop1zuo1, candidates) = old_state.get_candidates(config);
 
     if !candidates.into_iter().any(|cand| match cand {
-        message::PureMove::InfAfterStep(message::InfAfterStep {
+        message::PureMove__::InfAfterStep(message::InfAfterStep_ {
             src,
             step,
             planned_direction: _,
         }) => src == msg.src && step == msg.step,
-        message::PureMove::NormalMove(_) => false,
+        message::PureMove__::NormalMove(_) => false,
     }) {
         return Err(
             "The provided InfAfterStep was rejected by the crate `cetkaik_yhuap_move_candidates`.",
         );
     }
 
-    let c = state::ExcitedStateWithoutCiurl {
+    let c: state::ExcitedStateWithoutCiurl_<T> = state::ExcitedStateWithoutCiurl_ {
         f: old_state.f.clone(),
         whose_turn: old_state.whose_turn,
         flying_piece_src: msg.src,
@@ -479,27 +500,27 @@ pub fn apply_inf_after_step(
     };
 
     Ok(Probabilistic::Sticks {
-        s0: state::ExcitedState {
+        s0: state::ExcitedState_ {
             c: c.clone(),
             ciurl: 0,
         },
-        s1: state::ExcitedState {
+        s1: state::ExcitedState_ {
             c: c.clone(),
             ciurl: 1,
         },
-        s2: state::ExcitedState {
+        s2: state::ExcitedState_ {
             c: c.clone(),
             ciurl: 2,
         },
-        s3: state::ExcitedState {
+        s3: state::ExcitedState_ {
             c: c.clone(),
             ciurl: 3,
         },
-        s4: state::ExcitedState {
+        s4: state::ExcitedState_ {
             c: c.clone(),
             ciurl: 4,
         },
-        s5: state::ExcitedState { c, ciurl: 5 },
+        s5: state::ExcitedState_ { c, ciurl: 5 },
     })
 }
 
@@ -512,7 +533,7 @@ fn move_nontam_piece_from_src_to_dest_while_taking_opponent_piece_if_needed(
     src: absolute::Coord,
     dest: absolute::Coord,
     whose_turn: absolute::Side,
-) -> Result<(absolute::Board, Option<absolute::NonTam2Piece>), &'static str> {
+) -> Result<(absolute::Board, Option<cetkaik_core::ColorAndProf>), &'static str> {
     let mut new_board = board.clone();
 
     let src_piece = new_board
@@ -542,7 +563,7 @@ fn move_nontam_piece_from_src_to_dest_while_taking_opponent_piece_if_needed(
                 }
                 return Ok((
                     new_board,
-                    Some(absolute::NonTam2Piece {
+                    Some(cetkaik_core::ColorAndProf {
                         color: captured_piece_color,
                         prof: captured_piece_prof,
                     }),
@@ -599,7 +620,7 @@ pub fn apply_after_half_acceptance(
             a_side_hop1zuo1: old_state.c.f.a_side_hop1zuo1.clone(),
         };
 
-        if let Some(absolute::NonTam2Piece { color, prof }) = maybe_captured_piece {
+        if let Some(cetkaik_core::ColorAndProf { color, prof }) = maybe_captured_piece {
             new_field.insert_nontam_piece_into_hop1zuo1(color, prof, old_state.c.whose_turn);
         };
 
@@ -747,13 +768,18 @@ impl Config {
 
 /// Sends `HandNotResolved` to `HandResolved`.
 #[must_use]
-pub fn resolve(state: &state::HandNotResolved, config: Config) -> state::HandResolved {
+pub fn resolve<T: CetkaikRepresentation>(
+    state: &state::HandNotResolved_<T>,
+    config: Config,
+) -> state::HandResolved_<T> {
     use cetkaik_calculate_hand::{calculate_hands_and_score_from_pieces, ScoreAndHands};
     let tymoxtaxot_because_of_kut2tam2 = state.kut2tam2_happened && config.step_tam_is_a_hand;
 
-    let tymoxtaxot_because_of_newly_acquired: Option<i32> = match state.whose_turn {
+    let tymoxtaxot_because_of_newly_acquired: Option<i32> = match T::to_cetkaikcore_absolute_side(
+        state.whose_turn,
+    ) {
         absolute::Side::ASide => {
-            if state.previous_a_side_hop1zuo1 == state.f.a_side_hop1zuo1 {
+            if state.previous_a_side_hop1zuo1 == T::hop1zuo1_of(state.whose_turn, &state.f) {
                 None
             } else {
                 let ScoreAndHands {
@@ -764,7 +790,7 @@ pub fn resolve(state: &state::HandNotResolved, config: Config) -> state::HandRes
                 let ScoreAndHands {
                     score: new_score,
                     hands: new_hands,
-                } = calculate_hands_and_score_from_pieces(&state.f.a_side_hop1zuo1)
+                } = calculate_hands_and_score_from_pieces(&T::hop1zuo1_of(state.whose_turn,&state.f))
                     .expect("cannot fail, since the supplied list of piece should not exceed the limit on the number of piece");
 
                 // whether newly-acquired hand exists
@@ -776,7 +802,7 @@ pub fn resolve(state: &state::HandNotResolved, config: Config) -> state::HandRes
             }
         }
         absolute::Side::IASide => {
-            if state.previous_ia_side_hop1zuo1 == state.f.ia_side_hop1zuo1 {
+            if state.previous_ia_side_hop1zuo1 == T::hop1zuo1_of(state.whose_turn, &state.f) {
                 None
             } else {
                 let ScoreAndHands {
@@ -787,7 +813,7 @@ pub fn resolve(state: &state::HandNotResolved, config: Config) -> state::HandRes
                 let ScoreAndHands {
                     score: new_score,
                     hands: new_hands,
-                } = calculate_hands_and_score_from_pieces(&state.f.ia_side_hop1zuo1)
+                } = calculate_hands_and_score_from_pieces(&T::hop1zuo1_of(state.whose_turn,&state.f))
                 .expect("cannot fail, since the supplied list of piece should not exceed the limit on the number of piece");
 
                 // whether newly-acquired hand exists
@@ -807,14 +833,17 @@ pub fn resolve(state: &state::HandNotResolved, config: Config) -> state::HandRes
         // nothing happened; hand the turn to the next person
         // 役ができていないので、次の人に手番を渡す
         // 減点分×レートは引く。
-        match state
-            .scores
-            .edit(state.tam2tysak2_raw_penalty, state.whose_turn, state.rate)
-        {
+        match state.scores.edit(
+            state.tam2tysak2_raw_penalty,
+            T::to_cetkaikcore_absolute_side(state.whose_turn),
+            state.rate,
+        ) {
             Ok(new_scores) => {
-                return state::HandResolved::NeitherTymokNorTaxot(state::GroundState {
+                return state::HandResolved_::NeitherTymokNorTaxot(state::GroundState_ {
                     f: state.f.clone(),
-                    whose_turn: !state.whose_turn, /* hand the turn to the next person */
+                    whose_turn: T::from_cetkaikcore_absolute_side(
+                        !T::to_cetkaikcore_absolute_side(state.whose_turn),
+                    ), /* hand the turn to the next person */
                     season: state.season,
                     scores: new_scores,
                     rate: state.rate,
@@ -822,7 +851,7 @@ pub fn resolve(state: &state::HandNotResolved, config: Config) -> state::HandRes
                 });
             }
 
-            Err(victor) => return state::HandResolved::GameEndsWithoutTymokTaxot(victor),
+            Err(victor) => return state::HandResolved_::GameEndsWithoutTymokTaxot(victor),
         }
     }
 
@@ -836,7 +865,11 @@ pub fn resolve(state: &state::HandNotResolved, config: Config) -> state::HandRes
         }
         + tymoxtaxot_because_of_newly_acquired.unwrap_or(0);
 
-    let if_taxot = match state.scores.edit(raw_score, state.whose_turn, state.rate) {
+    let if_taxot = match state.scores.edit(
+        raw_score,
+        T::to_cetkaikcore_absolute_side(state.whose_turn),
+        state.rate,
+    ) {
         Err(victor) => IfTaxot::VictoriousSide(victor),
         Ok(new_scores) => {
             state.season.next().map_or(
@@ -848,10 +881,12 @@ pub fn resolve(state: &state::HandNotResolved, config: Config) -> state::HandRes
         }
     };
 
-    state::HandResolved::HandExists {
-        if_tymok: state::GroundState {
+    state::HandResolved_::HandExists {
+        if_tymok: state::GroundState_ {
             f: state.f.clone(),
-            whose_turn: !state.whose_turn, /* hand the turn to the next person */
+            whose_turn: T::from_cetkaikcore_absolute_side(!T::to_cetkaikcore_absolute_side(
+                state.whose_turn,
+            )), /* hand the turn to the next person */
             season: state.season,
             scores: state.scores,
             rate: state.rate.next(), /* double the stake */
