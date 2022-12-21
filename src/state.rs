@@ -1,10 +1,10 @@
-use super::{state, IfTaxot, Rate, Scores, Season};
-use cetkaik_yhuap_move_candidates::{CetkaikCore, CetkaikRepresentation};
+use crate::IfTaxot_;
+
+use super::{state, Rate, Scores, Season};
+use cetkaik_yhuap_move_candidates::CetkaikRepresentation;
 use serde::{Deserialize, Serialize};
 
 type PM<T> = super::message::PureMove__<<T as CetkaikRepresentation>::AbsoluteCoord>;
-
-pub type GroundState = GroundState_<CetkaikCore>;
 
 /// Normal state. ／一番普通の状態。
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -25,6 +25,7 @@ impl<T: CetkaikRepresentation> state::GroundState_<T> {
     /// use cetkaik_core::absolute::Coord;
     /// use cetkaik_core::absolute::Row::*;
     /// use cetkaik_core::absolute::Column::*;
+    /// use cetkaik_yhuap_move_candidates::CetkaikCore;
     /// use std::collections::HashSet;
     /// fn assert_eq_ignoring_order<T>(a: &[T], b: &[T])
     /// where
@@ -35,7 +36,7 @@ impl<T: CetkaikRepresentation> state::GroundState_<T> {
     ///
     ///     assert_eq!(a, b)
     /// }
-    /// let ia_first = state::GroundState {
+    /// let ia_first = state::GroundState_::<CetkaikCore> {
     ///     whose_turn: absolute::Side::IASide,
     ///     scores: Scores::new(),
     ///     rate: Rate::X1,
@@ -167,8 +168,9 @@ impl<T: CetkaikRepresentation> state::GroundState_<T> {
 
 #[test]
 fn test_get_candidates() {
-    use crate::message::AfterHalfAcceptance;
     use super::absolute;
+    use crate::message::AfterHalfAcceptance;
+    use cetkaik_yhuap_move_candidates::CetkaikCore;
     use absolute::{
         Column::Z,
         Coord,
@@ -176,8 +178,8 @@ fn test_get_candidates() {
     };
     use cetkaik_core::Profession;
     assert_eq!(
-        ExcitedState {
-            c: ExcitedStateWithoutCiurl {
+        ExcitedState_::<CetkaikCore> {
+            c: ExcitedStateWithoutCiurl_ {
                 f: absolute::Field {
                     a_side_hop1zuo1: vec![],
                     ia_side_hop1zuo1: vec![],
@@ -225,8 +227,6 @@ fn test_get_candidates() {
         ]
     );
 }
-
-pub type ExcitedState = ExcitedState_<CetkaikCore>;
 
 /// This is the state after the user has stepped over a piece and has cast the sticks so that the user can play to make an infinite movement from there. Seeing the sticks, the user is supposed to decide the final location and send it (`AfterHalfAcceptance`) to the server.
 /// ／踏越え後の無限移動をユーザーが行い、それに対して投げ棒で判定した後の状態。投げ棒を見て、ユーザーは最終的な移動場所を `ExcitedState` に対しこれから送りつける。
@@ -289,8 +289,6 @@ impl<T: CetkaikRepresentation> state::ExcitedState_<T> {
     }
 }
 
-pub type ExcitedStateWithoutCiurl = ExcitedStateWithoutCiurl_<CetkaikCore>;
-
 /// Same as `ExcitedState`, except that the ciurl is not mentioned.
 /// ／`ExcitedState` から投げ棒の値を除いたやつ。
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -304,8 +302,6 @@ pub struct ExcitedStateWithoutCiurl_<T: CetkaikRepresentation> {
     pub scores: Scores,
     pub rate: Rate,
 }
-
-pub type HandNotResolved = HandNotResolved_<CetkaikCore>;
 
 /// The water entry cast (if any) is now over, and thus the piece movement is now fully completed. However, I still haven't resolved whether a hand exists. If so, I must ask the user to choose whether to end the season or not.
 /// ／入水判定も終わり、駒を完全に動かし終わった。しかしながら、「役が存在していて再行・終季をユーザーに訊く」を発生させるか否かをまだ解決していない。そんな状態。
@@ -327,8 +323,6 @@ pub struct HandNotResolved_<T: CetkaikRepresentation> {
     pub tam2tysak2_will_trigger_taxottymok: bool,
 }
 
-pub type HandResolved = HandResolved_<CetkaikCore>;
-
 /// Converting `HandNotResolved` into `HandResolved` with `resolve` tells you whether a new hand was created. If so, the `HandExists` variant is taken; if not, the `NeitherTymokNorTaxot` is taken.
 /// ／`HandNotResolved` を `resolve` でこの型に変換することによって、『役は発生しなかったぞ』であるのか、それとも『役は発生しており、したがって【再行ならこの `GroundState` に至る】【終季ならこの `Probabilistic<state::GroundState>` に至る（どちらが先手になるかは鯖のみぞ知るので `Probabilistic`）】』のどちらであるかを知ることができる。撃皇が役を構成するかどうかによってここの処理は変わってくるので、
 /// `resolve` は `Config` を要求する。
@@ -337,7 +331,7 @@ pub enum HandResolved_<T: CetkaikRepresentation> {
     NeitherTymokNorTaxot(state::GroundState_<T>),
     HandExists {
         if_tymok: state::GroundState_<T>,
-        if_taxot: IfTaxot,
+        if_taxot: IfTaxot_<T>,
     },
 
     /// 減点行為が役でないルールでは、役が成立して終季・再行の選択が発生せずに点が尽きることがありうる

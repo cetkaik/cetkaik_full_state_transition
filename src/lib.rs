@@ -9,7 +9,6 @@
 use cetkaik_core::IsAbsoluteField;
 use cetkaik_core::IsBoard;
 use cetkaik_core::IsField;
-use cetkaik_yhuap_move_candidates::CetkaikCore;
 use cetkaik_yhuap_move_candidates::CetkaikRepresentation;
 use serde::{Deserialize, Serialize};
 
@@ -436,7 +435,8 @@ pub fn apply_normal_move<T: CetkaikRepresentation>(
 /// use cetkaik_core::absolute::Coord;
 /// use cetkaik_core::absolute::Row::*;
 /// use cetkaik_core::absolute::Column::*;
-/// let ia_first = state::GroundState {
+/// use cetkaik_yhuap_move_candidates::CetkaikCore;
+/// let ia_first = state::GroundState_::<CetkaikCore> {
 ///     whose_turn: absolute::Side::IASide,
 ///     scores: Scores::new(),
 ///     rate: Rate::X1,
@@ -619,8 +619,6 @@ pub fn apply_after_half_acceptance<T: CetkaikRepresentation>(
 
 pub use score::Victor;
 
-pub type IfTaxot = IfTaxot_<CetkaikCore>;
-
 /// An auxiliary type that represents whether we should terminate the game or proceed to the next season if the player chose to end the current season.
 /// ／もし終季が選ばれた際、次の季節に進むのか、それともゲームが終了するのかを保持するための補助的な型。
 #[derive(Clone, Debug)]
@@ -718,7 +716,7 @@ impl Config {
 
 /// Sends `HandNotResolved` to `HandResolved`.
 #[must_use]
-pub fn resolve<T: CetkaikRepresentation>(
+pub fn resolve<T: CetkaikRepresentation + Clone>(
     state: &state::HandNotResolved_<T>,
     config: Config,
 ) -> state::HandResolved_<T> {
@@ -820,13 +818,13 @@ pub fn resolve<T: CetkaikRepresentation>(
         T::to_cetkaikcore_absolute_side(state.whose_turn),
         state.rate,
     ) {
-        Err(victor) => IfTaxot::VictoriousSide(victor),
+        Err(victor) => IfTaxot_::VictoriousSide(victor),
         Ok(new_scores) => {
             state.season.next().map_or(
                 /* All seasons have ended */
-                IfTaxot::VictoriousSide(new_scores.which_side_is_winning()),
+                IfTaxot_::VictoriousSide(new_scores.which_side_is_winning()),
                 /* The next season exists */
-                |next_season| IfTaxot::NextSeason(beginning_of_season(next_season, new_scores)),
+                |next_season| IfTaxot_::NextSeason(beginning_of_season(next_season, new_scores)),
             )
         }
     };
