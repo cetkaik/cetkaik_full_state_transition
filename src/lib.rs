@@ -6,9 +6,9 @@
     clippy::module_name_repetitions
 )]
 
+use cetkaik_core::IsBoard;
 use cetkaik_yhuap_move_candidates::CetkaikCore;
 use cetkaik_yhuap_move_candidates::CetkaikRepresentation;
-use cetkaik_core::IsBoard;
 use serde::{Deserialize, Serialize};
 
 /// Represents the season. Currently, only four-season games are supported.
@@ -175,7 +175,8 @@ fn apply_tam_move<T: CetkaikRepresentation>(
             (0, false)
         };
     let mut new_field = old_state.f.clone();
-    let expect_tam = T::as_board_mut_absolute(&mut new_field).pop(src)
+    let expect_tam = T::as_board_mut_absolute(&mut new_field)
+        .pop(src)
         .ok_or("expected tam2 but found an empty square")?;
     if expect_tam != T::absolute_tam2() {
         return Err("expected tam2 but found a non-tam2 piece");
@@ -221,19 +222,27 @@ fn apply_tam_move<T: CetkaikRepresentation>(
     }))
 }
 
-fn apply_nontam_move(
-    old_state: &state::GroundState,
-    src: absolute::Coord,
-    dest: absolute::Coord,
-    step: Option<absolute::Coord>,
+fn apply_nontam_move<T: CetkaikRepresentation>(
+    old_state: &state::GroundState_<T>,
+    src: T::AbsoluteCoord,
+    dest: T::AbsoluteCoord,
+    step: Option<T::AbsoluteCoord>,
     config: Config,
-) -> Result<Probabilistic<state::HandNotResolved>, &'static str> {
-    let nothing_happened = state::HandNotResolved {
-        previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
-        previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
+) -> Result<Probabilistic<state::HandNotResolved_<T>>, &'static str> {
+    use cetkaik_core::IsField;
+
+    let nothing_happened = state::HandNotResolved_ {
+        previous_a_side_hop1zuo1: T::hop1zuo1_of(
+            T::from_cetkaikcore_absolute_side(cetkaik_core::absolute::Side::ASide),
+            &old_state.f,
+        ),
+        previous_ia_side_hop1zuo1: T::hop1zuo1_of(
+            T::from_cetkaikcore_absolute_side(cetkaik_core::absolute::Side::IASide),
+            &old_state.f,
+        ),
         kut2tam2_happened: !config.failure_to_complete_the_move_means_exempt_from_kut2_tam2
             && step.map_or(false, |step| {
-                matches!(old_state.f.board.get(&step), Some(absolute::Piece::Tam2))
+                T::as_board_absolute(&old_state.f).peek(step) == Some(T::absolute_tam2())
             }),
         rate: old_state.rate,
         i_have_moved_tam_in_this_turn: false,
@@ -247,39 +256,33 @@ fn apply_nontam_move(
     };
 
     if let Some(st) = step {
-        if !old_state.f.board.contains_key(&st) {
+        if field_is_empty_at::<T>(&old_state.f, st) {
             return Err("expected a stepping square but found an empty square");
         }
     }
 
-    let src_piece = old_state
-        .f
-        .board
-        .get(&src)
-        .ok_or("src does not contain a piece")?;
+    let src_piece: T::AbsolutePiece =
+        piece_on_field_at::<T>(&old_state.f, src).ok_or("src does not contain a piece")?;
 
-    let (new_board, maybe_captured_piece) =
-        move_nontam_piece_from_src_to_dest_while_taking_opponent_piece_if_needed(
-            &old_state.f.board,
+    let new_field = old_state
+        .f
+        .move_nontam_piece_from_src_to_dest_while_taking_opponent_piece_if_needed(
             src,
             dest,
             old_state.whose_turn,
         )?;
-    let mut new_field = absolute::Field {
-        board: new_board,
-        a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
-        ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
-    };
 
-    if let Some(cetkaik_core::ColorAndProf { color, prof }) = maybe_captured_piece {
-        new_field.insert_nontam_piece_into_hop1zuo1(color, prof, old_state.whose_turn);
-    }
-
-    let success = state::HandNotResolved {
-        previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
-        previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
+    let success = state::HandNotResolved_ {
+        previous_a_side_hop1zuo1: T::hop1zuo1_of(
+            T::from_cetkaikcore_absolute_side(cetkaik_core::absolute::Side::ASide),
+            &old_state.f,
+        ),
+        previous_ia_side_hop1zuo1: T::hop1zuo1_of(
+            T::from_cetkaikcore_absolute_side(cetkaik_core::absolute::Side::IASide),
+            &old_state.f,
+        ),
         kut2tam2_happened: step.map_or(false, |step| {
-            matches!(old_state.f.board.get(&step), Some(absolute::Piece::Tam2))
+            piece_on_field_at::<T>(&old_state.f, step) == Some(T::absolute_tam2())
         }),
         rate: old_state.rate,
         i_have_moved_tam_in_this_turn: false,
@@ -294,9 +297,9 @@ fn apply_nontam_move(
 
     // 入水判定
     // water-entry cast
-    if !absolute::is_water(src)
-        && !src_piece.has_prof(cetkaik_core::Profession::Nuak1)
-        && absolute::is_water(dest)
+    if !T::is_water_absolute(src)
+        && !T::has_prof_absolute(src_piece, cetkaik_core::Profession::Nuak1)
+        && T::is_water_absolute(dest)
     {
         return Ok(Probabilistic::Water {
             failure: nothing_happened,
