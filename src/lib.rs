@@ -6,6 +6,7 @@
     clippy::module_name_repetitions
 )]
 
+use cetkaik_core::IsAbsoluteField;
 use cetkaik_core::IsBoard;
 use cetkaik_core::IsField;
 use cetkaik_yhuap_move_candidates::CetkaikCore;
@@ -335,8 +336,8 @@ pub fn apply_normal_move<T: CetkaikRepresentation>(
         message::NormalMove_::NonTamMoveFromHopZuo { color, prof, dest } => {
             let new_field = old_state
                 .f
-                .search_from_hop1zuo1_and_parachute_at(color, prof, old_state.whose_turn, dest).ok_or("Cannot find an adequate piece to place, or the destination is occupied")
-                ?;
+                .search_from_hop1zuo1_and_parachute_at(color, prof, old_state.whose_turn, dest)
+                .ok_or("Cannot find an adequate piece to place, or the destination is occupied")?;
 
             // For the sake of consistency, `cetkaik_yhuap_move_candidates` is called,
             // but since all illegal moves from hop1zuo1 are those that are trivially illegal
@@ -849,26 +850,25 @@ pub fn resolve<T: CetkaikRepresentation>(
 /// Start of the game, with the season in spring and each player holding 20 points
 /// ／ゲーム開始、季節は春で所持点は20
 #[must_use]
-pub fn initial_state() -> Probabilistic<state::GroundState> {
+pub fn initial_state<T: CetkaikRepresentation + Clone>() -> Probabilistic<state::GroundState_<T>> {
     beginning_of_season(Season::Iei2, Scores::new())
 }
 
-fn beginning_of_season(season: Season, scores: Scores) -> Probabilistic<state::GroundState> {
-    let ia_first = state::GroundState {
-        whose_turn: absolute::Side::IASide,
+fn beginning_of_season<T: CetkaikRepresentation + Clone>(
+    season: Season,
+    scores: Scores,
+) -> Probabilistic<state::GroundState_<T>> {
+    let ia_first = state::GroundState_ {
+        whose_turn: T::from_cetkaikcore_absolute_side(absolute::Side::IASide),
         scores,
         rate: Rate::X1,
         season,
         tam_has_moved_previously: false,
-        f: absolute::Field {
-            a_side_hop1zuo1: vec![],
-            ia_side_hop1zuo1: vec![],
-            board: cetkaik_core::absolute::yhuap_initial_board(),
-        },
+        f: <T::AbsoluteField as IsAbsoluteField>::yhuap_initial(),
     };
     Probabilistic::WhoGoesFirst {
-        a_first: state::GroundState {
-            whose_turn: absolute::Side::ASide,
+        a_first: state::GroundState_ {
+            whose_turn: T::from_cetkaikcore_absolute_side(absolute::Side::ASide),
             ..ia_first.clone()
         },
         ia_first,
