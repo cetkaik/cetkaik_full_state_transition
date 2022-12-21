@@ -8,6 +8,7 @@
 
 use cetkaik_yhuap_move_candidates::CetkaikCore;
 use cetkaik_yhuap_move_candidates::CetkaikRepresentation;
+use cetkaik_core::IsBoard;
 use serde::{Deserialize, Serialize};
 
 /// Represents the season. Currently, only four-season games are supported.
@@ -141,14 +142,14 @@ impl Rate {
     }
 }
 
-fn apply_tam_move(
-    old_state: &state::GroundState_<CetkaikCore>,
-    src: <CetkaikCore as CetkaikRepresentation>::AbsoluteCoord,
-    first_dest: <CetkaikCore as CetkaikRepresentation>::AbsoluteCoord,
-    second_dest: <CetkaikCore as CetkaikRepresentation>::AbsoluteCoord,
-    step: Option<<CetkaikCore as CetkaikRepresentation>::AbsoluteCoord>,
+fn apply_tam_move<T: CetkaikRepresentation>(
+    old_state: &state::GroundState_<T>,
+    src: T::AbsoluteCoord,
+    first_dest: T::AbsoluteCoord,
+    second_dest: T::AbsoluteCoord,
+    step: Option<T::AbsoluteCoord>,
     config: Config,
-) -> Result<Probabilistic<state::HandNotResolved_<CetkaikCore>>, &'static str> {
+) -> Result<Probabilistic<state::HandNotResolved_<T>>, &'static str> {
     let (penalty1, is_a_hand1) = if old_state.tam_has_moved_previously {
         match config.moving_tam_immediately_after_tam_has_moved {
                 Consequence::Allowed => (0, false),
@@ -174,41 +175,35 @@ fn apply_tam_move(
             (0, false)
         };
     let mut new_field = old_state.f.clone();
-    let expect_tam = new_field
-        .board
-        .remove(&src)
+    let expect_tam = T::as_board_mut_absolute(&mut new_field).pop(src)
         .ok_or("expected tam2 but found an empty square")?;
-    if !expect_tam.is_tam2() {
+    if expect_tam != T::absolute_tam2() {
         return Err("expected tam2 but found a non-tam2 piece");
     }
 
-    if field_is_occupied_at::<CetkaikCore>(&new_field, first_dest) {
+    if field_is_occupied_at::<T>(&new_field, first_dest) {
         return Err("the first destination is already occupied");
     }
 
     if let Some(st) = step {
-        if field_is_empty_at::<CetkaikCore>(&new_field, st) {
+        if field_is_empty_at::<T>(&new_field, st) {
             return Err("the stepping square is empty");
         }
     }
 
-    if field_is_occupied_at::<CetkaikCore>(&new_field, second_dest) {
+    if field_is_occupied_at::<T>(&new_field, second_dest) {
         return Err("the second destination is already occupied");
     }
 
-    new_field.board.insert(second_dest, absolute::Piece::Tam2);
+    T::as_board_mut_absolute(&mut new_field).put(second_dest, Some(T::absolute_tam2()));
 
     Ok(Probabilistic::Pure(state::HandNotResolved_ {
-        previous_a_side_hop1zuo1: <CetkaikCore as CetkaikRepresentation>::hop1zuo1_of(
-            <CetkaikCore as CetkaikRepresentation>::from_cetkaikcore_absolute_side(
-                cetkaik_core::absolute::Side::ASide,
-            ),
+        previous_a_side_hop1zuo1: T::hop1zuo1_of(
+            T::from_cetkaikcore_absolute_side(cetkaik_core::absolute::Side::ASide),
             &old_state.f,
         ),
-        previous_ia_side_hop1zuo1: <CetkaikCore as CetkaikRepresentation>::hop1zuo1_of(
-            <CetkaikCore as CetkaikRepresentation>::from_cetkaikcore_absolute_side(
-                cetkaik_core::absolute::Side::IASide,
-            ),
+        previous_ia_side_hop1zuo1: T::hop1zuo1_of(
+            T::from_cetkaikcore_absolute_side(cetkaik_core::absolute::Side::IASide),
             &old_state.f,
         ),
 
