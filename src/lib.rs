@@ -7,6 +7,7 @@
 )]
 
 use cetkaik_core::IsBoard;
+use cetkaik_core::IsField;
 use cetkaik_yhuap_move_candidates::CetkaikCore;
 use cetkaik_yhuap_move_candidates::CetkaikRepresentation;
 use serde::{Deserialize, Serialize};
@@ -229,8 +230,6 @@ fn apply_nontam_move<T: CetkaikRepresentation>(
     step: Option<T::AbsoluteCoord>,
     config: Config,
 ) -> Result<Probabilistic<state::HandNotResolved_<T>>, &'static str> {
-    use cetkaik_core::IsField;
-
     let nothing_happened = state::HandNotResolved_ {
         previous_a_side_hop1zuo1: T::hop1zuo1_of(
             T::from_cetkaikcore_absolute_side(cetkaik_core::absolute::Side::ASide),
@@ -326,31 +325,18 @@ pub fn no_move_possible_at_all<T: CetkaikRepresentation>(
 }
 
 /// `NormalMove` sends `GroundState` to `Probabilistic<HandNotResolved>`
-pub fn apply_normal_move(
-    old_state: &state::GroundState,
-    msg: message::NormalMove,
+pub fn apply_normal_move<T: CetkaikRepresentation>(
+    old_state: &state::GroundState_<T>,
+    msg: message::NormalMove_<T::AbsoluteCoord>,
     config: Config,
-) -> Result<Probabilistic<state::HandNotResolved>, &'static str> {
+) -> Result<Probabilistic<state::HandNotResolved_<T>>, &'static str> {
     let (hop1zuo1_candidates, candidates) = old_state.get_candidates(config);
     match msg {
-        message::NormalMove::NonTamMoveFromHopZuo { color, prof, dest } => {
-            let mut new_field = old_state
+        message::NormalMove_::NonTamMoveFromHopZuo { color, prof, dest } => {
+            let new_field = old_state
                 .f
-                .find_and_remove_piece_from_hop1zuo1(color, prof, old_state.whose_turn)
-                .ok_or("Cannot find the specified piece in the hop1zuo1")?;
-
-            if new_field.board.contains_key(&dest) {
-                return Err("The destination is already occupied and hence cannot place a piece from hop1 zuo1");
-            }
-
-            new_field.board.insert(
-                dest,
-                absolute::Piece::NonTam2Piece {
-                    color,
-                    prof,
-                    side: old_state.whose_turn,
-                },
-            );
+                .search_from_hop1zuo1_and_parachute_at(color, prof, old_state.whose_turn, dest).ok_or("Cannot find an adequate piece to place, or the destination is occupied")
+                ?;
 
             // For the sake of consistency, `cetkaik_yhuap_move_candidates` is called,
             // but since all illegal moves from hop1zuo1 are those that are trivially illegal
@@ -362,13 +348,19 @@ pub fn apply_normal_move(
             // ここで弾かれるとしたらコードがバグっているということになる。
             // したがって、 return Err ではなく unreachable としてある。
 
-            if !hop1zuo1_candidates.contains(&message::PureMove::NormalMove(msg)) {
+            if !hop1zuo1_candidates.contains(&message::PureMove__::NormalMove(msg)) {
                 unreachable!("inconsistencies found between cetkaik_yhuap_move_candidates::PureMove::NonTamMoveFromHopZuo and cetkaik_full_state_transition::apply_nontam_move");
             }
 
-            Ok(Probabilistic::Pure(state::HandNotResolved {
-                previous_a_side_hop1zuo1: old_state.f.a_side_hop1zuo1.clone(),
-                previous_ia_side_hop1zuo1: old_state.f.ia_side_hop1zuo1.clone(),
+            Ok(Probabilistic::Pure(state::HandNotResolved_ {
+                previous_a_side_hop1zuo1: T::hop1zuo1_of(
+                    T::from_cetkaikcore_absolute_side(cetkaik_core::absolute::Side::ASide),
+                    &old_state.f,
+                ),
+                previous_ia_side_hop1zuo1: T::hop1zuo1_of(
+                    T::from_cetkaikcore_absolute_side(cetkaik_core::absolute::Side::IASide),
+                    &old_state.f,
+                ),
 
                 // The stepping of Tam2 never occurs if you are playing from hop1zuo1
                 // 持ち駒から打つ際には撃皇は決して起こらない
@@ -383,51 +375,51 @@ pub fn apply_normal_move(
                 tam2tysak2_raw_penalty: 0,
             }))
         }
-        message::NormalMove::TamMoveNoStep {
+        message::NormalMove_::TamMoveNoStep {
             src,
             first_dest,
             second_dest,
         } => {
-            if candidates.contains(&message::PureMove::NormalMove(msg)) {
-                apply_tam_move(old_state, src, first_dest, second_dest, None, config)
+            if candidates.contains(&message::PureMove__::NormalMove(msg)) {
+                apply_tam_move::<T>(old_state, src, first_dest, second_dest, None, config)
             } else {
                 Err("The provided TamMoveNoStep was rejected by the crate `cetkaik_yhuap_move_candidates`.")
             }
         }
-        message::NormalMove::TamMoveStepsDuringFormer {
+        message::NormalMove_::TamMoveStepsDuringFormer {
             src,
             first_dest,
             second_dest,
             step,
         } => {
-            if candidates.contains(&message::PureMove::NormalMove(msg)) {
-                apply_tam_move(old_state, src, first_dest, second_dest, Some(step), config)
+            if candidates.contains(&message::PureMove__::NormalMove(msg)) {
+                apply_tam_move::<T>(old_state, src, first_dest, second_dest, Some(step), config)
             } else {
                 Err("The provided TamMoveStepsDuringFormer was rejected by the crate `cetkaik_yhuap_move_candidates`.")
             }
         }
-        message::NormalMove::TamMoveStepsDuringLatter {
+        message::NormalMove_::TamMoveStepsDuringLatter {
             src,
             first_dest,
             second_dest,
             step,
         } => {
-            if candidates.contains(&message::PureMove::NormalMove(msg)) {
+            if candidates.contains(&message::PureMove__::NormalMove(msg)) {
                 apply_tam_move(old_state, src, first_dest, second_dest, Some(step), config)
             } else {
                 Err("The provided TamMoveStepsDuringLatter was rejected by the crate `cetkaik_yhuap_move_candidates`.")
             }
         }
 
-        message::NormalMove::NonTamMoveSrcDst { src, dest } => {
-            if candidates.contains(&message::PureMove::NormalMove(msg)) {
+        message::NormalMove_::NonTamMoveSrcDst { src, dest } => {
+            if candidates.contains(&message::PureMove__::NormalMove(msg)) {
                 apply_nontam_move(old_state, src, dest, None, config)
             } else {
                 Err("The provided NonTamMoveSrcDst was rejected by the crate `cetkaik_yhuap_move_candidates`.")
             }
         }
-        message::NormalMove::NonTamMoveSrcStepDstFinite { src, step, dest } => {
-            if candidates.contains(&message::PureMove::NormalMove(msg)) {
+        message::NormalMove_::NonTamMoveSrcStepDstFinite { src, step, dest } => {
+            if candidates.contains(&message::PureMove__::NormalMove(msg)) {
                 apply_nontam_move(old_state, src, dest, Some(step), config)
             } else {
                 Err("The provided NonTamMoveSrcStepDstFinite was rejected by the crate `cetkaik_yhuap_move_candidates`.")
@@ -528,63 +520,23 @@ mod score;
 
 pub use score::Scores;
 
-fn move_nontam_piece_from_src_to_dest_while_taking_opponent_piece_if_needed(
-    board: &absolute::Board,
-    src: absolute::Coord,
-    dest: absolute::Coord,
-    whose_turn: absolute::Side,
-) -> Result<(absolute::Board, Option<cetkaik_core::ColorAndProf>), &'static str> {
-    let mut new_board = board.clone();
-
-    let src_piece = new_board
-        .remove(&src)
-        .ok_or("src does not contain a piece")?;
-    if src_piece.is_tam2() {
-        return Err("Expected a NonTam2Piece to be present at the src, but found a Tam2");
-    }
-
-    if !src_piece.has_side(whose_turn) {
-        return Err("Found the opponent piece at the src");
-    }
-
-    let maybe_captured_piece = new_board.remove(&dest);
-    new_board.insert(dest, src_piece);
-
-    if let Some(captured_piece) = maybe_captured_piece {
-        match captured_piece {
-            absolute::Piece::Tam2 => return Err("Tried to capture a Tam2"),
-            absolute::Piece::NonTam2Piece {
-                color: captured_piece_color,
-                prof: captured_piece_prof,
-                side: captured_piece_side,
-            } => {
-                if captured_piece_side == whose_turn {
-                    return Err("Tried to capture an ally");
-                }
-                return Ok((
-                    new_board,
-                    Some(cetkaik_core::ColorAndProf {
-                        color: captured_piece_color,
-                        prof: captured_piece_prof,
-                    }),
-                ));
-            }
-        }
-    }
-    Ok((new_board, None))
-}
-
 /// `AfterHalfAcceptance` sends `ExcitedState` to `Probabilistic<HandNotResolved>`
-pub fn apply_after_half_acceptance(
-    old_state: &state::ExcitedState,
-    msg: message::AfterHalfAcceptance,
+pub fn apply_after_half_acceptance<T: CetkaikRepresentation>(
+    old_state: &state::ExcitedState_<T>,
+    msg: message::AfterHalfAcceptance_<T::AbsoluteCoord>,
     config: Config,
-) -> Result<Probabilistic<state::HandNotResolved>, &'static str> {
-    let nothing_happened = state::HandNotResolved {
-        previous_a_side_hop1zuo1: old_state.c.f.a_side_hop1zuo1.clone(),
-        previous_ia_side_hop1zuo1: old_state.c.f.ia_side_hop1zuo1.clone(),
+) -> Result<Probabilistic<state::HandNotResolved_<T>>, &'static str> {
+    let nothing_happened = state::HandNotResolved_ {
+        previous_a_side_hop1zuo1: T::hop1zuo1_of(
+            T::from_cetkaikcore_absolute_side(cetkaik_core::absolute::Side::ASide),
+            &old_state.c.f,
+        ),
+        previous_ia_side_hop1zuo1: T::hop1zuo1_of(
+            T::from_cetkaikcore_absolute_side(cetkaik_core::absolute::Side::IASide),
+            &old_state.c.f,
+        ),
         kut2tam2_happened: !config.failure_to_complete_the_move_means_exempt_from_kut2_tam2
-            && old_state.piece_at_flying_piece_step().is_tam2(),
+            && old_state.piece_at_flying_piece_step() == T::absolute_tam2(),
         rate: old_state.c.rate,
         i_have_moved_tam_in_this_turn: false,
         season: old_state.c.season,
@@ -606,28 +558,25 @@ pub fn apply_after_half_acceptance(
     if let Some(dest) = msg.dest {
         let piece = old_state.piece_at_flying_piece_src();
 
-        let (new_board, maybe_captured_piece) =
-            move_nontam_piece_from_src_to_dest_while_taking_opponent_piece_if_needed(
-                &old_state.c.f.board,
+        let new_field = old_state
+            .c
+            .f
+            .move_nontam_piece_from_src_to_dest_while_taking_opponent_piece_if_needed(
                 old_state.c.flying_piece_src,
                 dest,
                 old_state.c.whose_turn,
             )?;
 
-        let mut new_field = absolute::Field {
-            board: new_board,
-            ia_side_hop1zuo1: old_state.c.f.ia_side_hop1zuo1.clone(),
-            a_side_hop1zuo1: old_state.c.f.a_side_hop1zuo1.clone(),
-        };
-
-        if let Some(cetkaik_core::ColorAndProf { color, prof }) = maybe_captured_piece {
-            new_field.insert_nontam_piece_into_hop1zuo1(color, prof, old_state.c.whose_turn);
-        };
-
-        let success = state::HandNotResolved {
-            previous_a_side_hop1zuo1: old_state.c.f.a_side_hop1zuo1.clone(),
-            previous_ia_side_hop1zuo1: old_state.c.f.ia_side_hop1zuo1.clone(),
-            kut2tam2_happened: old_state.piece_at_flying_piece_step().is_tam2(),
+        let success = state::HandNotResolved_ {
+            previous_a_side_hop1zuo1: T::hop1zuo1_of(
+                T::from_cetkaikcore_absolute_side(cetkaik_core::absolute::Side::ASide),
+                &old_state.c.f,
+            ),
+            previous_ia_side_hop1zuo1: T::hop1zuo1_of(
+                T::from_cetkaikcore_absolute_side(cetkaik_core::absolute::Side::IASide),
+                &old_state.c.f,
+            ),
+            kut2tam2_happened: old_state.piece_at_flying_piece_step() == T::absolute_tam2(),
             rate: old_state.c.rate,
             i_have_moved_tam_in_this_turn: false,
             season: old_state.c.season,
@@ -642,9 +591,9 @@ pub fn apply_after_half_acceptance(
         // Trying to enter the water without any exemptions (neither the piece started from within water, nor the piece is a Vessel).
         // Hence sticks must be cast.
         // 入水判定が免除される特例（出発地点が皇水であるか、移動している駒が船である）なしで水に入ろうとしているので、判定が必要。
-        if !absolute::is_water(old_state.c.flying_piece_src)
-            && !piece.has_prof(cetkaik_core::Profession::Nuak1)
-            && absolute::is_water(dest)
+        if !T::is_water_absolute(old_state.c.flying_piece_src)
+            && !T::has_prof_absolute(piece, cetkaik_core::Profession::Nuak1)
+            && T::is_water_absolute(dest)
         {
             Ok(Probabilistic::Water {
                 success,
