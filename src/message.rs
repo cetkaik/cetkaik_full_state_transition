@@ -1,4 +1,4 @@
-use cetkaik_fundamental::PureMove_;
+use cetkaik_fundamental::{serialize_color, serialize_prof, PureMove_};
 
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub enum PureMove__<T> {
@@ -69,6 +69,50 @@ impl<T> From<PureMove_<T>> for PureMove__<T> {
                 dest,
                 is_water_entry_ciurl: _,
             } => Self::NormalMove(NormalMove_::NonTamMoveSrcDst { src, dest }),
+        }
+    }
+}
+
+impl<Coord: std::fmt::Display> std::fmt::Display for PureMove__<Coord> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PureMove__::InfAfterStep(InfAfterStep_ {
+                src,
+                step,
+                planned_direction,
+            }) => write!(f, "{src}片{step}心{planned_direction}"),
+            PureMove__::NormalMove(NormalMove_::NonTamMoveFromHopZuo { color, prof, dest }) => {
+                write!(
+                    f,
+                    "{}{}{}",
+                    serialize_color(*color),
+                    serialize_prof(*prof),
+                    (dest)
+                )
+            }
+            PureMove__::NormalMove(NormalMove_::NonTamMoveSrcDst { src, dest }) => {
+                write!(f, "{src}片{dest}",)
+            }
+            PureMove__::NormalMove(NormalMove_::NonTamMoveSrcStepDstFinite { src, dest, step }) => {
+                write!(f, "{src}片{step}{dest}")
+            }
+            PureMove__::NormalMove(NormalMove_::TamMoveNoStep {
+                src,
+                first_dest,
+                second_dest,
+            }) => write!(f, "{src}皇[{first_dest}]{second_dest}"),
+            PureMove__::NormalMove(NormalMove_::TamMoveStepsDuringFormer {
+                src,
+                first_dest,
+                second_dest,
+                step,
+            }) => write!(f, "{src}皇{step}[{first_dest}]{second_dest}"),
+            PureMove__::NormalMove(NormalMove_::TamMoveStepsDuringLatter {
+                src,
+                first_dest,
+                second_dest,
+                step,
+            }) => write!(f, "{src}皇[{first_dest}]{step}{second_dest}"),
         }
     }
 }
