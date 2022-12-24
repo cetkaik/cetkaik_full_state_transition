@@ -1,6 +1,6 @@
 use cetkaik_fundamental::{serialize_color, serialize_prof, PureMove_};
 
-#[derive(Eq, PartialEq, Clone, Debug)]
+#[derive(Eq, PartialEq, Clone, Debug, Copy, Hash)]
 pub enum PureMove__<T> {
     InfAfterStep(InfAfterStep_<T>),
     NormalMove(NormalMove_<T>),
