@@ -8,10 +8,10 @@
 
 use cetkaik_fundamental::AbsoluteSide;
 use cetkaik_fundamental::AbsoluteSide::{ASide, IASide};
-use cetkaik_traits::CetkaikRepresentation;
 use cetkaik_traits::IsAbsoluteField;
 use cetkaik_traits::IsBoard;
 use cetkaik_traits::IsField;
+use cetkaik_traits::{CetkaikRepresentation, IsPieceWithSide};
 use serde::{Deserialize, Serialize};
 
 /// Represents the season. Currently, only four-season games are supported.
@@ -279,7 +279,7 @@ fn apply_nontam_move<T: CetkaikRepresentation>(
     // 入水判定
     // water-entry cast
     if !T::is_water_absolute(src)
-        && !T::has_prof_absolute(src_piece, cetkaik_fundamental::Profession::Nuak1)
+        && !src_piece.has_prof(cetkaik_fundamental::Profession::Nuak1)
         && T::is_water_absolute(dest)
     {
         return Ok(Probabilistic::Water {
@@ -558,7 +558,7 @@ pub fn apply_after_half_acceptance<T: CetkaikRepresentation>(
         // Hence sticks must be cast.
         // 入水判定が免除される特例（出発地点が皇水であるか、移動している駒が船である）なしで水に入ろうとしているので、判定が必要。
         if !T::is_water_absolute(old_state.c.flying_piece_src)
-            && !T::has_prof_absolute(piece, cetkaik_fundamental::Profession::Nuak1)
+            && !piece.has_prof(cetkaik_fundamental::Profession::Nuak1)
             && T::is_water_absolute(dest)
         {
             Ok(Probabilistic::Water {
