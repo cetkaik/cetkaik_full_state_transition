@@ -40,21 +40,21 @@ fn field_is_empty_at<T: CetkaikRepresentation>(
     f: &T::AbsoluteField,
     coord: T::AbsoluteCoord,
 ) -> bool {
-    T::absolute_get(T::as_board_absolute(f), coord).is_none()
+    T::as_board_absolute(f).peek(coord).is_none()
 }
 
 fn field_is_occupied_at<T: CetkaikRepresentation>(
     f: &T::AbsoluteField,
     coord: T::AbsoluteCoord,
 ) -> bool {
-    T::absolute_get(T::as_board_absolute(f), coord).is_some()
+    T::as_board_absolute(f).peek(coord).is_some()
 }
 
 fn piece_on_field_at<T: CetkaikRepresentation>(
     f: &T::AbsoluteField,
     coord: T::AbsoluteCoord,
 ) -> Option<T::AbsolutePiece> {
-    T::absolute_get(T::as_board_absolute(f), coord)
+    T::as_board_absolute(f).peek(coord)
 }
 
 impl Season {
