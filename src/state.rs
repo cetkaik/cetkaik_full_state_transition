@@ -115,7 +115,7 @@ impl<T: CetkaikRepresentation> state::GroundState_<T> {
             .collect::<Vec<_>>();
 
         let mut candidates = not_from_hop1zuo1_candidates_vec::<T>(
-            &cetkaik_yhuap_move_candidates::Config {
+            &cetkaik_yhuap_move_candidates::AllowKut2Tam2 {
                 allow_kut2tam2: true,
             },
             config.tam_itself_is_tam_hue,
@@ -248,7 +248,7 @@ impl<T: CetkaikRepresentation> state::ExcitedState_<T> {
         config: super::Config,
     ) -> Vec<super::message::AfterHalfAcceptance_<T::AbsoluteCoord>> {
         let candidates = cetkaik_yhuap_move_candidates::not_from_hop1zuo1_candidates_vec::<T>(
-            &cetkaik_yhuap_move_candidates::Config {
+            &cetkaik_yhuap_move_candidates::AllowKut2Tam2 {
                 allow_kut2tam2: true,
             },
             config.tam_itself_is_tam_hue,
