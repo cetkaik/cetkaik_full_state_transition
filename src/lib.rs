@@ -200,8 +200,8 @@ fn apply_tam_move<T: CetkaikRepresentation>(
     T::as_board_mut_absolute(&mut new_field).put(second_dest, Some(T::absolute_tam2()));
 
     Ok(Probabilistic::Pure(state::HandNotResolved_ {
-        previous_a_side_hop1zuo1: T::hop1zuo1_of(ASide, &old_state.f),
-        previous_ia_side_hop1zuo1: T::hop1zuo1_of(IASide, &old_state.f),
+        previous_a_side_hop1zuo1: old_state.f.hop1zuo1_of(ASide).collect(),
+        previous_ia_side_hop1zuo1: old_state.f.hop1zuo1_of(IASide).collect(),
 
         // When Tam2 moves, Tam2 is never stepped on (this assumption fails with the two-tam rule, which is not yet supported.)
         // 皇の動きで撃皇が発生することはない（二皇の場合は修正が必要）
@@ -225,8 +225,8 @@ fn apply_nontam_move<T: CetkaikRepresentation>(
     config: Config,
 ) -> Result<Probabilistic<state::HandNotResolved_<T>>, &'static str> {
     let nothing_happened = state::HandNotResolved_ {
-        previous_a_side_hop1zuo1: T::hop1zuo1_of(ASide, &old_state.f),
-        previous_ia_side_hop1zuo1: T::hop1zuo1_of(IASide, &old_state.f),
+        previous_a_side_hop1zuo1: old_state.f.hop1zuo1_of(ASide).collect(),
+        previous_ia_side_hop1zuo1: old_state.f.hop1zuo1_of(IASide).collect(),
         kut2tam2_happened: !config.failure_to_complete_the_move_means_exempt_from_kut2_tam2
             && step.map_or(false, |step| {
                 T::as_board_absolute(&old_state.f).peek(step) == Some(T::absolute_tam2())
@@ -260,8 +260,8 @@ fn apply_nontam_move<T: CetkaikRepresentation>(
         )?;
 
     let success = state::HandNotResolved_ {
-        previous_a_side_hop1zuo1: T::hop1zuo1_of(ASide, &old_state.f),
-        previous_ia_side_hop1zuo1: T::hop1zuo1_of(IASide, &old_state.f),
+        previous_a_side_hop1zuo1: old_state.f.hop1zuo1_of(ASide).collect(),
+        previous_ia_side_hop1zuo1: old_state.f.hop1zuo1_of(IASide).collect(),
         kut2tam2_happened: step.map_or(false, |step| {
             piece_on_field_at::<T>(&old_state.f, step) == Some(T::absolute_tam2())
         }),
@@ -335,8 +335,8 @@ pub fn apply_normal_move<T: CetkaikRepresentation>(
             }
 
             Ok(Probabilistic::Pure(state::HandNotResolved_ {
-                previous_a_side_hop1zuo1: T::hop1zuo1_of(ASide, &old_state.f),
-                previous_ia_side_hop1zuo1: T::hop1zuo1_of(IASide, &old_state.f),
+                previous_a_side_hop1zuo1: old_state.f.hop1zuo1_of(ASide).collect(),
+                previous_ia_side_hop1zuo1: old_state.f.hop1zuo1_of(IASide).collect(),
 
                 // The stepping of Tam2 never occurs if you are playing from hop1zuo1
                 // 持ち駒から打つ際には撃皇は決して起こらない
@@ -505,8 +505,8 @@ pub fn apply_after_half_acceptance<T: CetkaikRepresentation>(
     config: Config,
 ) -> Result<Probabilistic<state::HandNotResolved_<T>>, &'static str> {
     let nothing_happened = state::HandNotResolved_ {
-        previous_a_side_hop1zuo1: T::hop1zuo1_of(ASide, &old_state.c.f),
-        previous_ia_side_hop1zuo1: T::hop1zuo1_of(IASide, &old_state.c.f),
+        previous_a_side_hop1zuo1: old_state.c.f.hop1zuo1_of(ASide).collect(),
+        previous_ia_side_hop1zuo1: old_state.c.f.hop1zuo1_of(IASide).collect(),
         kut2tam2_happened: !config.failure_to_complete_the_move_means_exempt_from_kut2_tam2
             && old_state.piece_at_flying_piece_step() == T::absolute_tam2(),
         rate: old_state.c.rate,
@@ -540,8 +540,8 @@ pub fn apply_after_half_acceptance<T: CetkaikRepresentation>(
             )?;
 
         let success = state::HandNotResolved_ {
-            previous_a_side_hop1zuo1: T::hop1zuo1_of(ASide, &old_state.c.f),
-            previous_ia_side_hop1zuo1: T::hop1zuo1_of(IASide, &old_state.c.f),
+            previous_a_side_hop1zuo1: old_state.c.f.hop1zuo1_of(ASide).collect(),
+            previous_ia_side_hop1zuo1: old_state.c.f.hop1zuo1_of(IASide).collect(),
             kut2tam2_happened: old_state.piece_at_flying_piece_step() == T::absolute_tam2(),
             rate: old_state.c.rate,
             i_have_moved_tam_in_this_turn: false,
@@ -690,7 +690,8 @@ pub fn resolve<T: CetkaikRepresentation + Clone>(
 
     let tymoxtaxot_because_of_newly_acquired: Option<i32> = match state.whose_turn {
         AbsoluteSide::ASide => {
-            if state.previous_a_side_hop1zuo1 == T::hop1zuo1_of(state.whose_turn, &state.f) {
+            // logically incorrect (should compare a Set, not a Vec), but works
+            if state.previous_a_side_hop1zuo1 == state.f.hop1zuo1_of(state.whose_turn).collect::<Vec<_>>() {
                 None
             } else {
                 let ScoreAndHands {
@@ -701,7 +702,7 @@ pub fn resolve<T: CetkaikRepresentation + Clone>(
                 let ScoreAndHands {
                     score: new_score,
                     hands: new_hands,
-                } = calculate_hands_and_score_from_pieces(&T::hop1zuo1_of(state.whose_turn,&state.f))
+                } = calculate_hands_and_score_from_pieces(&state.f.hop1zuo1_of(state.whose_turn).collect::<Vec<_>>())
                     .expect("cannot fail, since the supplied list of piece should not exceed the limit on the number of piece");
 
                 // whether newly-acquired hand exists
@@ -713,7 +714,8 @@ pub fn resolve<T: CetkaikRepresentation + Clone>(
             }
         }
         AbsoluteSide::IASide => {
-            if state.previous_ia_side_hop1zuo1 == T::hop1zuo1_of(state.whose_turn, &state.f) {
+            // logically incorrect (should compare a Set, not a Vec), but works
+            if state.previous_ia_side_hop1zuo1 == state.f.hop1zuo1_of(state.whose_turn).collect::<Vec<_>>() {
                 None
             } else {
                 let ScoreAndHands {
@@ -724,7 +726,7 @@ pub fn resolve<T: CetkaikRepresentation + Clone>(
                 let ScoreAndHands {
                     score: new_score,
                     hands: new_hands,
-                } = calculate_hands_and_score_from_pieces(&T::hop1zuo1_of(state.whose_turn,&state.f))
+                } = calculate_hands_and_score_from_pieces(&state.f.hop1zuo1_of(state.whose_turn).collect::<Vec<_>>())
                 .expect("cannot fail, since the supplied list of piece should not exceed the limit on the number of piece");
 
                 // whether newly-acquired hand exists
